@@ -5,7 +5,8 @@ WORKDIR="$(pwd)"
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 
-TEMPLATE_REPO="${TEMPLATE_REPO:-https://github.com/0xayf/provider-upjet-gitea.git}"
+TEMPLATE_REPO="${TEMPLATE_REPO:-https://github.com/crossplane/upjet-provider-template.git}"
+TEMPLATE_TARBALL_URL="${TEMPLATE_TARBALL_URL:-https://codeload.github.com/crossplane/upjet-provider-template/tar.gz/refs/heads/main}"
 
 PROVIDER_NAME_LOWER="${PROVIDER_NAME_LOWER:-gitea}"
 PROVIDER_NAME_NORMAL="${PROVIDER_NAME_NORMAL:-Gitea}"
@@ -28,11 +29,16 @@ TERRAFORM_DOCS_PATH="${TERRAFORM_DOCS_PATH:-docs}"
 bootstrap_from_gitea() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
-  curl -fsSL "https://codeload.github.com/0xayf/provider-upjet-gitea/tar.gz/refs/heads/main" | \
+  curl -fsSL "${TEMPLATE_TARBALL_URL}" | \
     tar -xz -C "${tmp_dir}" --strip-components=1
   rsync -a --delete \
     --exclude ".git" \
+    --exclude ".cache" \
+    --exclude ".work" \
     --exclude "build" \
+    --exclude "examples" \
+    --exclude "examples-generated" \
+    --exclude "extensions" \
     --exclude ".github/workflows" \
     --exclude ".github/PULL_REQUEST_TEMPLATE.md" \
     --exclude ".github/renovate.json5" \
@@ -57,7 +63,7 @@ bootstrap_from_gitea() {
   rm -f "${WORKDIR}/OWNERS.md"
 
   if [ ! -f "${WORKDIR}/hack/prepare.sh" ]; then
-    curl -fsSL "https://raw.githubusercontent.com/crossplane/provider-upjet-gitea/main/hack/prepare.sh" \
+    curl -fsSL "https://raw.githubusercontent.com/crossplane/upjet-provider-template/main/hack/prepare.sh" \
       -o "${WORKDIR}/hack/prepare.sh"
   fi
 
@@ -104,7 +110,7 @@ bootstrap_from_gitea() {
   fi
 }
 
-if [ ! -f "${WORKDIR}/cmd/generator/main.go" ]; then
+if [ "${FORCE_BOOTSTRAP:-}" = "1" ] || [ ! -f "${WORKDIR}/cmd/generator/main.go" ] || [ ! -d "${WORKDIR}/cluster/images/${PROJECT_NAME}" ]; then
   bootstrap_from_gitea
 fi
 

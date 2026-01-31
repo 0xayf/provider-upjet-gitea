@@ -8,7 +8,7 @@ set -uox pipefail
 
 REPLACE_FILES='./* ./.github :!build/** :!go.* :!hack/prepare.sh :!hack/bootstrap.sh :!hack/generate.sh :!hack/test.sh'
 # shellcheck disable=SC2086
-git grep -l 'template' -- ${REPLACE_FILES} | xargs -r sed -i.bak "s/provider-upjet-gitea/provider-${PROVIDER_NAME_LOWER}/g"
+git grep -l 'template' -- ${REPLACE_FILES} | xargs -r sed -i.bak "s/upjet-provider-template/provider-${PROVIDER_NAME_LOWER}/g"
 # shellcheck disable=SC2086
 git grep -l 'template' -- ${REPLACE_FILES} | xargs -r sed -i.bak "s/template/${PROVIDER_NAME_LOWER}/g"
 # shellcheck disable=SC2086
@@ -26,7 +26,7 @@ git grep -l "ujconfig\.WithRootGroup(\"${PROVIDER_NAME_LOWER}\.m\.crossplane\.io
 
 # We need to be careful while replacing "template" keyword in go.mod as it could tamper
 # some imported packages under require section.
-sed -i.bak "s|crossplane/provider-upjet-gitea|${ORGANIZATION_NAME}/provider-${PROVIDER_NAME_LOWER}|g" go.mod
+sed -i.bak "s|crossplane/upjet-provider-template|${ORGANIZATION_NAME}/provider-${PROVIDER_NAME_LOWER}|g" go.mod
 sed -i.bak -e "s|PROJECT_REPO ?= github.com/crossplane/|PROJECT_REPO ?= github.com/${ORGANIZATION_NAME}/|g" -e "s|\(blob/main/internal/\)${PROVIDER_NAME_LOWER}s|\1templates|g" Makefile
 sed -i.bak "s/\[YEAR\]/$(date +%Y)/g" LICENSE
 
@@ -34,11 +34,11 @@ sed -i.bak "s/\[YEAR\]/$(date +%Y)/g" LICENSE
 find . -name "*.bak" -type f -delete
 
 mv "internal/clients/template.go" "internal/clients/${PROVIDER_NAME_LOWER}.go"
-mv "cluster/images/provider-upjet-gitea" "cluster/images/provider-${PROVIDER_NAME_LOWER}"
+mv "cluster/images/upjet-provider-template" "cluster/images/provider-${PROVIDER_NAME_LOWER}"
 
 # We need to remove this api folder otherwise first `make generate` fails with
 # the following error probably due to some optimizations in go generate with v1.17:
-# generate: open /Users/hasanturken/Workspace/crossplane-contrib/provider-upjet-gitea/apis/null/v1alpha1/zz_generated.deepcopy.go: no such file or directory
+# generate: open /Users/hasanturken/Workspace/crossplane-contrib/upjet-provider-template/apis/null/v1alpha1/zz_generated.deepcopy.go: no such file or directory
 rm -rf apis/cluster/null
 rm -rf apis/namespaced/null
 # remove the sample directory which was a configuration in the template

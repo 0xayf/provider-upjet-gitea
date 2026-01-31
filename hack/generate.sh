@@ -61,6 +61,12 @@ podman run --rm -it \
     git submodule sync
     git submodule update --init --recursive
 
+    echo "Fetching Terraform docs..."
+    make pull-docs
+    if [ -d ".work/${TERRAFORM_PROVIDER_SOURCE}/.git" ]; then
+      git -C ".work/${TERRAFORM_PROVIDER_SOURCE}" checkout --force HEAD -- "${TERRAFORM_DOCS_PATH}" || true
+    fi
+
     mkdir -p .work
     LOG_PATH=".work/generate.log"
 
