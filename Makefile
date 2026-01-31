@@ -97,6 +97,9 @@ fallthrough: submodules
 # we ensure image is present in daemon.
 xpkg.build.$(PROJECT_NAME): build.init do.build.images
 
+# Ensure provider binaries exist before image build.
+do.build.images: build.code.platform
+
 # NOTE(hasheddan): we ensure up is installed prior to running platform-specific
 # build steps in parallel to avoid encountering an installation race condition.
 build.init: $(UP) $(CROSSPLANE_CLI) check-terraform-version
