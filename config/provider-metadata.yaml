@@ -1,0 +1,738 @@
+name: go-gitea/gitea
+resources:
+    gitea Provider:
+        subCategory: ""
+        name: gitea Provider
+        title: gitea Provider
+        argumentDocs:
+            base_url: (String) The Gitea Base API URL
+            cacert_file: (String) A file containing the ca certificate to use in case ssl certificate is not from a standard chain
+            insecure: (Boolean) Disable SSL verification of API calls
+            password: (String) Password in case of using basic auth
+            token: (String) The application token used to connect to Gitea.
+            username: (String) Username in case of using basic auth
+        importStatements: []
+    gitea_fork:
+        subCategory: ""
+        description: gitea_fork manages repository fork to the current user or an organisation Forking a repository to a dedicated user is currently unsupported Creating a fork using this resource without an organisation will create the fork in the executors name
+        name: gitea_fork
+        title: gitea_fork Resource - terraform-provider-gitea
+        examples:
+            - name: user_fork_of_repo1_in_org1
+              manifest: |-
+                {
+                  "owner": "${gitea_org.org1.name}",
+                  "repo": "${gitea_repository.repo1_in_org1.name}"
+                }
+              references:
+                owner: gitea_org.org1.name
+                repo: gitea_repository.repo1_in_org1.name
+              dependencies:
+                gitea_org.org1: |-
+                    {
+                      "name": "org1"
+                    }
+                gitea_org.org2: |-
+                    {
+                      "name": "org2"
+                    }
+                gitea_repository.repo1_in_org1: |-
+                    {
+                      "name": "repo1-in-org1",
+                      "username": "${gitea_org.org1.name}"
+                    }
+            - name: org2_fork_of_repo1_in_org1
+              manifest: |-
+                {
+                  "organization": "${gitea_org.org2.name}",
+                  "owner": "${gitea_org.org1.name}",
+                  "repo": "${gitea_repository.repo1_in_org1.name}"
+                }
+              references:
+                organization: gitea_org.org2.name
+                owner: gitea_org.org1.name
+                repo: gitea_repository.repo1_in_org1.name
+              dependencies:
+                gitea_org.org1: |-
+                    {
+                      "name": "org1"
+                    }
+                gitea_org.org2: |-
+                    {
+                      "name": "org2"
+                    }
+                gitea_repository.repo1_in_org1: |-
+                    {
+                      "name": "repo1-in-org1",
+                      "username": "${gitea_org.org1.name}"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            organization: (String) The organization that owns the forked repo
+            owner: (String) The owner or owning organization of the repository to fork
+            repo: (String) The name of the repository to fork
+        importStatements: []
+    gitea_git_hook:
+        subCategory: ""
+        description: 'gitea_git_hook manages git hooks on a repository. import is currently not supported WARNING: using this resource requires to enable server side hookswhich are known to cause security issues https://github.com/go-gitea/gitea/pull/13058! if you want to procede, you need to enable server side hooks as stated here https://docs.gitea.io/en-us/config-cheat-sheet/#security-security'
+        name: gitea_git_hook
+        title: gitea_git_hook Resource - terraform-provider-gitea
+        examples:
+            - name: org_repo_post_receive
+              manifest: |-
+                {
+                  "content": "${file(\"${path.module}/post-receive.sh\")}",
+                  "name": "post-receive",
+                  "repo": "${gitea_repository.example.name}",
+                  "user": "${gitea_org.example.name}"
+                }
+              references:
+                repo: gitea_repository.example.name
+                user: gitea_org.example.name
+              dependencies:
+                gitea_org.example: |-
+                    {
+                      "name": "git-hook-example-org"
+                    }
+                gitea_repository.example: |-
+                    {
+                      "name": "git-hook-example-repo",
+                      "username": "${gitea_org.example.name}"
+                    }
+        argumentDocs:
+            content: (String) Content of the git hook
+            id: (String) The ID of this resource.
+            name: (String) Name of the git hook to configure
+            repo: (String) The repository that this hook belongs too.
+            user: (String) The user (or organisation) owning the repo this hook belongs too
+        importStatements: []
+    gitea_gpg_key Resource - terraform-provider-gitea:
+        subCategory: ""
+        description: gitea_gpg_key manages gpg keys that are associated with the current user.
+        name: gitea_gpg_key Resource - terraform-provider-gitea
+        title: gitea_gpg_key Resource - terraform-provider-gitea
+        argumentDocs:
+            armored_public_key: (String) An armored GPG public key
+            id: (String) The ID of this resource.
+            key_id: (String) The ID of the GPG key
+        importStatements: []
+    gitea_oauth2_app Resource - terraform-provider-gitea:
+        subCategory: ""
+        description: Handling gitea oauth application https://docs.gitea.io/en-us/oauth2-provider/ resources
+        name: gitea_oauth2_app Resource - terraform-provider-gitea
+        title: gitea_oauth2_app Resource - terraform-provider-gitea
+        argumentDocs:
+            client_id: (String) OAuth2 Application client id
+            client_secret: (String, Sensitive) Oauth2 Application client secret
+            confidential_client: (Boolean) If set to false, it will be a public client (PKCE will be required)
+            id: (String) The ID of this resource.
+            name: (String) OAuth Application name
+            redirect_uris: (Set of String) Accepted redirect URIs
+        importStatements: []
+    gitea_org:
+        subCategory: ""
+        description: gitea_org manages a gitea organisation. Organisations are a way to group repositories and abstract permission management in a gitea instance.
+        name: gitea_org
+        title: gitea_org Resource - terraform-provider-gitea
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "org-example-org"
+                }
+              dependencies:
+                gitea_repository.example: |-
+                    {
+                      "name": "org-example-repo",
+                      "username": "${gitea_org.example.name}"
+                    }
+        argumentDocs:
+            avatar_url: (String)
+            description: (String) A description of this organisation.
+            full_name: (String) The display name of the organisation. Defaults to the value of name.
+            id: (String) The ID of this resource.
+            location: (String)
+            name: (String) The name of the organisation without spaces.
+            repo_admin_change_team_access: (Boolean)
+            repos: (List of String) List of all Repositories that are part of this organisation
+            visibility: (String) Flag is this organisation should be publicly visible or not.
+            website: (String) A link to a website with more information about this organisation.
+        importStatements: []
+    gitea_org Data Source - terraform-provider-gitea:
+        subCategory: ""
+        name: gitea_org Data Source - terraform-provider-gitea
+        title: gitea_org Data Source - terraform-provider-gitea
+        argumentDocs:
+            avatar_url: (String)
+            description: (String)
+            full_name: (String)
+            id: (Number) The ID of this resource.
+            location: (String)
+            name: (String)
+            visibility: (String)
+            website: (String)
+        importStatements: []
+    gitea_public_key:
+        subCategory: ""
+        description: gitea_public_key manages ssh key that are associated with users.
+        name: gitea_public_key
+        title: gitea_public_key Resource - terraform-provider-gitea
+        examples:
+            - name: test_user_key
+              manifest: |-
+                {
+                  "key": "${file(\"${path.module}/id_ed25519.pub\")}",
+                  "title": "public-key-test",
+                  "username": "${gitea_user.test.username}"
+                }
+              references:
+                username: gitea_user.test.username
+              dependencies:
+                gitea_user.test: |-
+                    {
+                      "email": "public-key-test@user.dev",
+                      "login_name": "public-key-test",
+                      "must_change_password": false,
+                      "password": "Geheim1!",
+                      "username": "public-key-test"
+                    }
+        argumentDocs:
+            created: (String)
+            fingerprint: (String)
+            id: (String) The ID of this resource.
+            key: (String, Sensitive) An armored SSH key to add
+            read_only: (Boolean) Describe if the key has only read access or read/write
+            title: (String) Title of the key to add
+            type: (String)
+            username: (String) User to associate with the added key
+        importStatements: []
+    gitea_repo Data Source - terraform-provider-gitea:
+        subCategory: ""
+        name: gitea_repo Data Source - terraform-provider-gitea
+        title: gitea_repo Data Source - terraform-provider-gitea
+        argumentDocs:
+            clone_url: (String)
+            created: (String)
+            default_branch: (String)
+            description: (String)
+            fork: (Boolean)
+            forks: (Number)
+            full_name: (String)
+            html_url: (String)
+            id: (String) The ID of this resource.
+            mirror: (Boolean)
+            name: (String)
+            open_issue_count: (Number)
+            permission_admin: (Boolean)
+            permission_pull: (Boolean)
+            permission_push: (Boolean)
+            private: (Boolean)
+            size: (Number)
+            ssh_url: (String)
+            stars: (Number)
+            updated: (String)
+            username: (String)
+            watchers: (Number)
+            website: (String)
+        importStatements: []
+    gitea_repository:
+        subCategory: ""
+        description: gitea_repository manages a gitea repository. Per default this repository will be initializiled with the provided configuration (gitignore, License etc.). If the username property is set to a organisation name, the provider will try to look if this organisation exists and create the repository under the organisation scope. Repository migrations have some properties that are not available to regular repositories. These are all prefixed with migration_.
+        name: gitea_repository
+        title: gitea_repository Resource - terraform-provider-gitea
+        examples:
+            - name: test
+              manifest: |-
+                {
+                  "gitignores": "Go",
+                  "issue_labels": "Default",
+                  "license": "MIT",
+                  "name": "repository-test",
+                  "private": true,
+                  "username": "${gitea_user.example.username}"
+                }
+              references:
+                username: gitea_user.example.username
+              dependencies:
+                gitea_user.example: |-
+                    {
+                      "email": "repo_example_user@user.dev",
+                      "login_name": "repo_example_user",
+                      "password": "Geheim1!",
+                      "username": "repo_example_user"
+                    }
+            - name: mirror
+              manifest: |-
+                {
+                  "depends_on": [
+                    "${gitea_user.example}"
+                  ],
+                  "description": "Mirror of Terraform Provider",
+                  "migration_clone_addresse": "https://git.uploadfilter24.eu/lerentis/terraform-provider-gitea.git",
+                  "migration_service": "gitea",
+                  "migration_service_auth_token": "${var.gitea_mirror_token}",
+                  "mirror": true,
+                  "name": "terraform-provider-gitea-mirror",
+                  "username": "${gitea_user.example.username}"
+                }
+              references:
+                migration_service_auth_token: var.gitea_mirror_token
+                username: gitea_user.example.username
+              dependencies:
+                gitea_user.example: |-
+                    {
+                      "email": "repo_example_user@user.dev",
+                      "login_name": "repo_example_user",
+                      "password": "Geheim1!",
+                      "username": "repo_example_user"
+                    }
+            - name: clone
+              manifest: |-
+                {
+                  "depends_on": [
+                    "${gitea_user.example}"
+                  ],
+                  "description": "Clone of Terraform Provider",
+                  "migration_clone_address": "https://git.uploadfilter24.eu/lerentis/terraform-provider-gitea.git",
+                  "migration_service": "gitea",
+                  "migration_service_auth_token": "${var.gitea_clone_token}",
+                  "mirror": false,
+                  "name": "terraform-provider-gitea-clone",
+                  "username": "${gitea_user.example.username}"
+                }
+              references:
+                migration_service_auth_token: var.gitea_clone_token
+                username: gitea_user.example.username
+              dependencies:
+                gitea_user.example: |-
+                    {
+                      "email": "repo_example_user@user.dev",
+                      "login_name": "repo_example_user",
+                      "password": "Geheim1!",
+                      "username": "repo_example_user"
+                    }
+        argumentDocs:
+            allow_manual_merge: (Boolean)
+            allow_merge_commits: (Boolean)
+            allow_rebase: (Boolean)
+            allow_rebase_explicit: (Boolean)
+            allow_squash_merge: (Boolean)
+            archive_on_destroy: (Boolean) Set to 'true' to archive the repository instead of deleting on destroy.
+            archived: (Boolean)
+            auto_init: (Boolean) Flag if the repository should be initiated with the configured values
+            autodetect_manual_merge: (Boolean)
+            clone_url: (String)
+            created: (String)
+            default_branch: (String) The default branch of the repository. Defaults to main
+            description: (String) The description of the repository.
+            gitignores: |-
+                (String) A specific gitignore that should be commited to the repositoryon creation if auto_init is set to true
+                Need to exist in the gitea instance
+            has_issues: (Boolean) A flag if the repository should have issue management enabled or not.
+            has_projects: (Boolean) A flag if the repository should have the native project management enabled or not.
+            has_pull_requests: (Boolean) A flag if the repository should acceppt pull requests or not.
+            has_wiki: (Boolean) A flag if the repository should have the native wiki enabled or not.
+            html_url: (String)
+            id: (String) The ID of this resource.
+            ignore_whitespace_conflicts: (Boolean)
+            issue_labels: |-
+                (String) The Issue Label configuration to be used in this repository.
+                Need to exist in the gitea instance
+            license: |-
+                (String) The license under which the source code of this repository should be.
+                Need to exist in the gitea instance
+            migration_clone_address: (String)
+            migration_clone_addresse: (String) DEPRECATED in favor of migration_clone_address
+            migration_issue_labels: (Boolean)
+            migration_lfs: (Boolean)
+            migration_lfs_endpoint: (String)
+            migration_milestones: (Boolean)
+            migration_mirror_interval: (String) valid time units are 'h', 'm', 's'. 0 to disable automatic sync
+            migration_releases: (Boolean)
+            migration_service: (String) git/github/gitlab/gitea/gogs
+            migration_service_auth_password: (String, Sensitive)
+            migration_service_auth_token: (String, Sensitive)
+            migration_service_auth_username: (String)
+            mirror: (Boolean)
+            name: (String) The Name of the repository
+            permission_admin: (Boolean)
+            permission_pull: (Boolean)
+            permission_push: (Boolean)
+            private: (Boolean) Flag if the repository should be private or not.
+            readme: (String)
+            repo_template: (Boolean)
+            ssh_url: (String)
+            updated: (String)
+            username: (String) The Owner of the repository
+            website: (String) A link to a website with more information.
+        importStatements: []
+    gitea_repository_actions_secret Resource - terraform-provider-gitea:
+        subCategory: ""
+        name: gitea_repository_actions_secret Resource - terraform-provider-gitea
+        title: gitea_repository_actions_secret Resource - terraform-provider-gitea
+        argumentDocs:
+            created_at: (String) Date of 'actions_secret' creation.
+            id: (String) The ID of this resource.
+            repository: (String) Name of the repository.
+            repository_owner: (String) Owner of the repository.
+            secret_name: (String) Name of the secret.
+            secret_value: (String, Sensitive) Value of the secret.
+        importStatements: []
+    gitea_repository_actions_variable Resource - terraform-provider-gitea:
+        subCategory: ""
+        name: gitea_repository_actions_variable Resource - terraform-provider-gitea
+        title: gitea_repository_actions_variable Resource - terraform-provider-gitea
+        argumentDocs:
+            id: (String) The ID of this resource.
+            repository: (String) Name of the repository.
+            repository_owner: (String) Owner of the repository.
+            value: (String) Value of the variable.
+            variable_name: (String) Name of the variable.
+        importStatements: []
+    gitea_repository_branch_protection Resource - terraform-provider-gitea:
+        subCategory: ""
+        description: This resource allows you to create and manage branch protections for repositories.
+        name: gitea_repository_branch_protection Resource - terraform-provider-gitea
+        title: gitea_repository_branch_protection Resource - terraform-provider-gitea
+        argumentDocs:
+            approval_whitelist_teams: |-
+                (List of String) Only reviews from allowlisted teams will count to the required
+                approvals. Without approval allowlist, reviews from anyone with
+                write access count to the required approvals.
+            approval_whitelist_users: |-
+                (List of String) Only reviews from allowlisted users will count to the required
+                approvals. Without approval allowlist, reviews from anyone with
+                write access count to the required approvals.
+            block_merge_on_official_review_requests: |-
+                (Boolean) Merging will not be possible when it has official
+                review requests, even if there are enough approvals.
+            block_merge_on_outdated_branch: (Boolean) Merging will not be possible when head branch is behind base branch.
+            block_merge_on_rejected_reviews: |-
+                (Boolean) Merging will not be possible when changes are
+                requested by official reviewers, even if there are enough
+                approvals.
+            created_at: (String) Webhook creation timestamp
+            dismiss_stale_approvals: |-
+                (Boolean) When new commits that change the content of the pull request
+                are pushed to the branch, old approvals will be dismissed.
+            enable_approval_whitelist: (Boolean) True if a approval whitelist is used.
+            enable_merge_whitelist: (Boolean) True if a merge whitelist is used.
+            enable_push: |-
+                (Boolean) Anyone with write access will be allowed to push to this branch
+                (but not force push), add a whitelist users or teams to limit
+                access.
+            enable_push_whitelist: (Boolean) True if a push whitelist is used.
+            enable_status_check: |-
+                (Boolean) Require status checks to pass before merging. When enabled,
+                commits must first be pushed to another branch, then merged
+                or pushed directly to a branch that matches this rule after
+                status checks have passed. If no contexts are matched, the
+                last commit must be successful regardless of context
+            id: (String) The ID of this resource.
+            merge_whitelist_teams: (List of String) Allow only allowlisted teams to merge pull requests into this branch.
+            merge_whitelist_users: (List of String) Allow only allowlisted users to merge pull requests into this branch.
+            name: (String) Repository name
+            protected_file_patterns: (String) Protected file patterns (separated using semicolon ';')
+            push_whitelist_deploy_keys: (Boolean) Allow deploy keys with write access to push. Requires enable_push to be set to true.
+            push_whitelist_teams: (List of String) Allowlisted teams for pushing. Requires enable_push to be set to true.
+            push_whitelist_users: (List of String) Allowlisted users for pushing. Requires enable_push to be set to true.
+            require_signed_commits: (Boolean) Reject pushes to this branch if they are unsigned or unverifiable.
+            required_approvals: (Number) Allow only to merge pull request with enough positive reviews.
+            rule_name: (String) Protected Branch Name Pattern
+            status_check_patterns: |-
+                (List of String) Enter patterns to specify which status checks must pass before
+                branches can be merged into a branch that matches this rule.
+                Each line specifies a pattern. Patterns cannot be empty.
+            unprotected_file_patterns: (String) Unprotected file patterns (separated using semicolon ';')
+            updated_at: (String) Webhook creation timestamp
+            username: (String) User name or organization name
+        importStatements: []
+    gitea_repository_key:
+        subCategory: ""
+        description: gitea_repository_key manages a deploy key for a single gitea_repository. Every key needs a unique name and unique key, i.e. no key can be added twice to the same repo
+        name: gitea_repository_key
+        title: gitea_repository_key Resource - terraform-provider-gitea
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "key": "${tls_private_key.example.public_key_openssh}",
+                  "read_only": true,
+                  "repository": "${gitea_repository.example.id}",
+                  "title": "Example Deploy Key"
+                }
+              references:
+                key: tls_private_key.example.public_key_openssh
+                repository: gitea_repository.example.id
+              dependencies:
+                gitea_repository.example: |-
+                    {
+                      "name": "example",
+                      "private": true,
+                      "username": "${gitea_user.example.username}"
+                    }
+                gitea_user.example: |-
+                    {
+                      "email": "repo_key_example_user@user.dev",
+                      "login_name": "repo_key_example_user",
+                      "password": "Geheim1!",
+                      "username": "repo_key_example_user"
+                    }
+                tls_private_key.example: |-
+                    {
+                      "algorithm": "RSA",
+                      "rsa_bits": 4096
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            key: (String) Armored SSH key to add
+            read_only: (Boolean) Whether this key has read or read/write access
+            repository: (Number) The ID of the repository where the deploy key belongs to
+            title: (String) Name of the deploy key
+        importStatements: []
+    gitea_repository_webhook Resource - terraform-provider-gitea:
+        subCategory: ""
+        description: This resource allows you to create and manage webhooks for repositories.
+        name: gitea_repository_webhook Resource - terraform-provider-gitea
+        title: gitea_repository_webhook Resource - terraform-provider-gitea
+        argumentDocs:
+            active: (Boolean) Set webhook to active, e.g. true
+            authorization_header: (String) Webhook authorization header
+            branch_filter: (String) Set branch filter on the webhook, e.g. "*"
+            content_type: (String) The content type of the payload. It can be json, or form
+            created_at: (String) Webhook creation timestamp
+            events: (List of String) A list of events that will trigger the webhool, e.g. ["push"]
+            id: (String) The ID of this resource.
+            name: (String) Repository name
+            secret: (String) Webhook secret
+            type: (String) Webhook type, e.g. gitea
+            url: (String) Target URL of the webhook
+            username: (String) User name or organization name
+        importStatements: []
+    gitea_team:
+        subCategory: ""
+        description: gitea_team manages Team that are part of an organisation.
+        name: gitea_team
+        title: gitea_team Resource - terraform-provider-gitea
+        examples:
+            - name: test_team
+              manifest: |-
+                {
+                  "description": "Devs of Test Org",
+                  "name": "Devs",
+                  "organisation": "${gitea_org.test_org.name}",
+                  "permission": "write"
+                }
+              references:
+                organisation: gitea_org.test_org.name
+              dependencies:
+                gitea_org.test_org: |-
+                    {
+                      "name": "team-example-org"
+                    }
+                gitea_repository.test: |-
+                    {
+                      "gitignores": "Go",
+                      "issue_labels": "Default",
+                      "license": "MIT",
+                      "name": "team-example-repo",
+                      "private": true,
+                      "username": "${gitea_org.test_org.name}"
+                    }
+            - name: test_team_restricted
+              manifest: |-
+                {
+                  "description": "Restricted Devs of Test Org",
+                  "include_all_repositories": false,
+                  "name": "Devs-Restricted",
+                  "organisation": "${gitea_org.test_org.name}",
+                  "permission": "write",
+                  "repositories": [
+                    "${gitea_repository.test.name}"
+                  ]
+                }
+              references:
+                organisation: gitea_org.test_org.name
+                repositories: gitea_repository.test.name
+              dependencies:
+                gitea_org.test_org: |-
+                    {
+                      "name": "team-example-org"
+                    }
+                gitea_repository.test: |-
+                    {
+                      "gitignores": "Go",
+                      "issue_labels": "Default",
+                      "license": "MIT",
+                      "name": "team-example-repo",
+                      "private": true,
+                      "username": "${gitea_org.test_org.name}"
+                    }
+        argumentDocs:
+            can_create_repos: (Boolean) Flag if the Teams members should be able to create Rpositories in the Organisation
+            description: (String) Description of the Team
+            id: (String) The ID of this resource.
+            include_all_repositories: (Boolean) Flag if the Teams members should have access to all Repositories in the Organisation
+            name: (String) Name of the Team
+            organisation: (String) The organisation which this Team is part of.
+            permission: |-
+                (String) Permissions associated with this Team
+                Can be none, read, write, admin or owner
+            repositories: (List of String) List of Repositories that should be part of this team
+            units: |-
+                (String) List of types of Repositories that should be allowed to be created from Team members.
+                Can be repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects and/or repo.ext_wiki
+        importStatements: []
+    gitea_team_members:
+        subCategory: ""
+        description: gitea_team_members manages all members of a single team. This resource will be recreated on member changes.
+        name: gitea_team_members
+        title: gitea_team_members Resource - terraform-provider-gitea
+        examples:
+            - name: example_members
+              manifest: |-
+                {
+                  "members": "${[for user in gitea_user.example_users : user.username]}",
+                  "team_id": "${gitea_team.example_team.id}"
+                }
+              references:
+                team_id: gitea_team.example_team.id
+              dependencies:
+                gitea_org.example_org: |-
+                    {
+                      "name": "members_example_org"
+                    }
+                gitea_team.example_team: |-
+                    {
+                      "description": "An example of team membership",
+                      "name": "members_example_team",
+                      "organisation": "${gitea_org.example_org.name}",
+                      "permission": "read"
+                    }
+                gitea_user.example_users: |-
+                    {
+                      "count": 5,
+                      "email": "members_example_user_${count.index}@user.dev",
+                      "login_name": "members_example_user_${count.index}",
+                      "password": "Geheim1!",
+                      "username": "members_example_user_${count.index}"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            members: (Set of String) The user names of the members of the team.
+            team_id: (Number) The ID of the team.
+        importStatements: []
+    gitea_team_membership:
+        subCategory: ""
+        description: gitea_team_membership manages a single user's membership of a single team.
+        name: gitea_team_membership
+        title: gitea_team_membership Resource - terraform-provider-gitea
+        examples:
+            - name: example_team_memberships
+              manifest: |-
+                {
+                  "for_each": "${{ for user in gitea_user.example_users : user.username =\u003e user }}",
+                  "team_id": "${gitea_team.example_team.id}",
+                  "username": "${each.value[\"username\"]}"
+                }
+              references:
+                team_id: gitea_team.example_team.id
+                username: each.value["username"]
+              dependencies:
+                gitea_org.example_org: |-
+                    {
+                      "name": "membership_example_org"
+                    }
+                gitea_team.example_team: |-
+                    {
+                      "description": "An example team for membership testing",
+                      "name": "membership_example_team",
+                      "organisation": "${gitea_org.example_org.name}",
+                      "permission": "read"
+                    }
+                gitea_user.example_users: |-
+                    {
+                      "count": 5,
+                      "email": "membership_example_user_${count.index}@user.dev",
+                      "login_name": "membership_example_user_${count.index}",
+                      "password": "Geheim1!",
+                      "username": "membership_example_user_${count.index}"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            team_id: (Number) The ID of the team.
+            username: (String) The username of the team member.
+        importStatements: []
+    gitea_token:
+        subCategory: ""
+        description: 'gitea_token manages gitea Access Tokens. Due to upstream limitations (see https://gitea.com/gitea/go-sdk/issues/610) this resource can only be used with username/password provider configuration. WARNING: Tokens will be stored in the terraform state!'
+        name: gitea_token
+        title: gitea_token Resource - terraform-provider-gitea
+        examples:
+            - name: test_token
+              manifest: |-
+                {
+                  "name": "test_token",
+                  "scopes": [
+                    "all"
+                  ]
+                }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            last_eight: (String)
+            name: (String) The name of the Access Token
+            scopes: (Set of String) List of string representations of scopes for the token
+            token: (String, Sensitive) The actual Access Token
+        importStatements: []
+    gitea_user:
+        subCategory: ""
+        description: gitea_user manages a native gitea user. If you are using OIDC or other kinds of authentication mechanisms you can still try to managessh keys or other ressources this way
+        name: gitea_user
+        title: gitea_user Resource - terraform-provider-gitea
+        examples:
+            - name: test
+              manifest: |-
+                {
+                  "email": "user-test@user.dev",
+                  "login_name": "user-test",
+                  "must_change_password": false,
+                  "password": "Geheim1!",
+                  "username": "user-test"
+                }
+        argumentDocs:
+            active: (Boolean) Flag if this user should be active or not
+            admin: (Boolean) Flag if this user should be an administrator or not
+            allow_create_organization: (Boolean)
+            allow_git_hook: (Boolean)
+            allow_import_local: (Boolean)
+            description: (String) A description of the user
+            email: (String) E-Mail Address of the user
+            force_password_change: (Boolean) Flag if the user defined password should be overwritten or not
+            full_name: (String) Full name of the user
+            id: (String) The ID of this resource.
+            location: (String)
+            login_name: (String) The login name can differ from the username
+            max_repo_creation: (Number)
+            must_change_password: (Boolean) Flag if the user should change the password after first login
+            password: (String, Sensitive) Password to be set for the user
+            prohibit_login: (Boolean) Flag if the user should not be allowed to log in (bot user)
+            restricted: (Boolean)
+            send_notification: (Boolean) Flag to send a notification about the user creation to the defined email
+            username: (String) Username of the user to be created
+            visibility: (String) Visibility of the user. Can be public, limited or private
+        importStatements: []
+    gitea_user Data Source - terraform-provider-gitea:
+        subCategory: ""
+        name: gitea_user Data Source - terraform-provider-gitea
+        title: gitea_user Data Source - terraform-provider-gitea
+        argumentDocs:
+            avatar_url: (String)
+            created: (String)
+            email: (String)
+            full_name: (String)
+            id: (Number) The ID of this resource.
+            is_admin: (Boolean)
+            language: (String)
+            last_login: (String)
+            username: (String)
+        importStatements: []
