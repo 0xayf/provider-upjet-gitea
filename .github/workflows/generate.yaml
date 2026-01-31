@@ -1,0 +1,56 @@
+name: Generate Provider
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          check-latest: true
+
+      - name: Install goimports
+        run: go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Bootstrap and generate
+        env:
+          OWNER: ${{ github.repository_owner }}
+          PROVIDER_NAME_LOWER: gitea
+          PROVIDER_NAME_NORMAL: Gitea
+          PROJECT_NAME: provider-upjet-gitea
+          CRD_ROOT_GROUP: ${{ vars.CRD_ROOT_GROUP || 'crossplane.io' }}
+          TERRAFORM_PROVIDER_SOURCE: go-gitea/gitea
+          TERRAFORM_PROVIDER_REPO: https://github.com/go-gitea/terraform-provider-gitea
+          TERRAFORM_PROVIDER_VERSION: 0.7.0
+          TERRAFORM_PROVIDER_DOWNLOAD_NAME: terraform-provider-gitea
+          TERRAFORM_NATIVE_PROVIDER_BINARY: terraform-provider-gitea_v0.7.0
+          TERRAFORM_DOCS_PATH: docs
+          GENERATE: "true"
+        run: |
+          chmod +x hack/bootstrap.sh
+          ./hack/bootstrap.sh
+
+      - name: Commit and push if changed
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore: regenerate provider"
+            git push
+          fi
