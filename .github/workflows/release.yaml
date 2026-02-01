@@ -33,11 +33,10 @@ jobs:
 
       - name: Build and publish
         env:
-          PLATFORMS: linux_amd64
           REGISTRY_ORGS: ghcr.io/${{ github.repository_owner }}
           XPKG_REG_ORGS: ghcr.io/${{ github.repository_owner }}
           XPKG_REG_ORGS_NO_PROMOTE: ghcr.io/${{ github.repository_owner }}
         run: |
           make submodules
-          make xpkg.build
-          make xpkg.release.publish
+          make PLATFORMS=linux_amd64 xpkg.build
+          make PLATFORMS=linux_amd64 xpkg.release.publish

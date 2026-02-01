@@ -5,7 +5,6 @@ WORKDIR="$(pwd)"
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 
-TEMPLATE_REPO="${TEMPLATE_REPO:-https://github.com/crossplane/upjet-provider-template.git}"
 TEMPLATE_TARBALL_URL="${TEMPLATE_TARBALL_URL:-https://codeload.github.com/crossplane/upjet-provider-template/tar.gz/refs/heads/main}"
 
 PROVIDER_NAME_LOWER="${PROVIDER_NAME_LOWER:-gitea}"
@@ -14,7 +13,7 @@ PROJECT_NAME="${PROJECT_NAME:-provider-upjet-gitea}"
 CRD_ROOT_GROUP="${CRD_ROOT_GROUP:-crossplane.io}"
 
 OWNER="${OWNER:-${GITHUB_REPOSITORY_OWNER:-}}"
-if [ -z "${OWNER}" ]; then
+if [[ -z "${OWNER}" ]]; then
   echo "OWNER is required (set OWNER or GITHUB_REPOSITORY_OWNER)." >&2
   exit 1
 fi
@@ -26,11 +25,23 @@ TERRAFORM_PROVIDER_DOWNLOAD_NAME="${TERRAFORM_PROVIDER_DOWNLOAD_NAME:-terraform-
 TERRAFORM_NATIVE_PROVIDER_BINARY="${TERRAFORM_NATIVE_PROVIDER_BINARY:-terraform-provider-gitea_v${TERRAFORM_PROVIDER_VERSION}}"
 TERRAFORM_DOCS_PATH="${TERRAFORM_DOCS_PATH:-docs}"
 
-bootstrap_from_gitea() {
+replace_in_files() {
+  local pattern="$1"
+  local replacement="$2"
+  
+  set +o pipefail
+  grep -rl --exclude-dir=.git "$pattern" . 2>/dev/null | \
+    xargs -r sed -i.bak "s|${pattern}|${replacement}|g" 2>/dev/null || true
+  set -o pipefail
+  find . -name "*.bak" -type f -delete 2>/dev/null || true
+}
+
+bootstrap_from_template() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
   curl -fsSL "${TEMPLATE_TARBALL_URL}" | \
     tar -xz -C "${tmp_dir}" --strip-components=1
+  
   rsync -a --delete \
     --exclude ".git" \
     --exclude ".cache" \
@@ -50,28 +61,29 @@ bootstrap_from_gitea() {
     --exclude "hack/bootstrap.sh" \
     --exclude "hack/build.sh" \
     --exclude "hack/generate.sh" \
+    --exclude "hack/lib.sh" \
     --exclude "hack/test.sh" \
     --exclude "README.md" \
     "${tmp_dir}/" "${WORKDIR}/"
   rm -rf "${tmp_dir}"
 
-  rm -f "${WORKDIR}/.github/PULL_REQUEST_TEMPLATE.md"
-  rm -f "${WORKDIR}/.github/renovate.json5"
-  rm -f "${WORKDIR}/.golangci.yml"
-  rm -f "${WORKDIR}/CODEOWNERS"
-  rm -f "${WORKDIR}/CODE_OF_CONDUCT.md"
-  rm -f "${WORKDIR}/LICENSE"
-  rm -f "${WORKDIR}/OWNERS.md"
+  rm -f "${WORKDIR}/.github/PULL_REQUEST_TEMPLATE.md" \
+        "${WORKDIR}/.github/renovate.json5" \
+        "${WORKDIR}/.golangci.yml" \
+        "${WORKDIR}/CODEOWNERS" \
+        "${WORKDIR}/CODE_OF_CONDUCT.md" \
+        "${WORKDIR}/LICENSE" \
+        "${WORKDIR}/OWNERS.md"
 
-  if [ ! -f "${WORKDIR}/hack/prepare.sh" ]; then
+  if [[ ! -f "${WORKDIR}/hack/prepare.sh" ]]; then
     curl -fsSL "https://raw.githubusercontent.com/crossplane/upjet-provider-template/main/hack/prepare.sh" \
       -o "${WORKDIR}/hack/prepare.sh"
   fi
 
-  if [ -f "${WORKDIR}/hack/prepare.sh" ]; then
+  if [[ -f "${WORKDIR}/hack/prepare.sh" ]]; then
     sed -i.bak 's/set -euox pipefail/set -uox pipefail/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/| xargs /| xargs -r /g' "${WORKDIR}/hack/prepare.sh"
-    sed -i.bak 's/:!hack\/prepare\.sh/:!hack\/prepare\.sh :!hack\/bootstrap\.sh :!hack\/build\.sh :!hack\/generate\.sh :!hack\/test\.sh/' "${WORKDIR}/hack/prepare.sh"
+    sed -i.bak 's/:!hack\/prepare\.sh/:!hack\/prepare\.sh :!hack\/bootstrap\.sh :!hack\/build\.sh :!hack\/generate\.sh :!hack\/lib\.sh :!hack\/test\.sh/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/git clean -fd/find . -name "*.bak" -type f -delete/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/^git mv /mv /' "${WORKDIR}/hack/prepare.sh"
     rm -f "${WORKDIR}/hack/prepare.sh.bak"
@@ -84,53 +96,30 @@ bootstrap_from_gitea() {
   CRD_ROOT_GROUP="${CRD_ROOT_GROUP}" \
   ./hack/prepare.sh
 
-  if [ -f "${WORKDIR}/config/provider.go" ]; then
+  if [[ -f "${WORKDIR}/config/provider.go" ]]; then
     sed -i.bak '/config\/cluster\/null/d' "${WORKDIR}/config/provider.go"
     sed -i.bak '/config\/namespaced\/null/d' "${WORKDIR}/config/provider.go"
     sed -i.bak '/nullCluster\.Configure/d' "${WORKDIR}/config/provider.go"
     sed -i.bak '/nullNamespaced\.Configure/d' "${WORKDIR}/config/provider.go"
     rm -f "${WORKDIR}/config/provider.go.bak"
   fi
-
-  if [ -n "${OWNER}" ]; then
-    set +o pipefail
-    grep -rl --exclude-dir=.git "github.com/${OWNER}/provider-${PROVIDER_NAME_LOWER}" . | \
-      xargs -r sed -i.bak "s|github.com/${OWNER}/provider-${PROVIDER_NAME_LOWER}|github.com/${OWNER}/${PROJECT_NAME}|g"
-    grep -rl --exclude-dir=.git "${OWNER}/provider-${PROVIDER_NAME_LOWER}" . | \
-      xargs -r sed -i.bak "s|${OWNER}/provider-${PROVIDER_NAME_LOWER}|${OWNER}/${PROJECT_NAME}|g"
-    grep -rl --exclude-dir=.git "github.com/0xayf/provider-upjet-gitea" . | \
-      xargs -r sed -i.bak "s|github.com/0xayf/provider-upjet-gitea|github.com/${OWNER}/${PROJECT_NAME}|g"
-    grep -rl --exclude-dir=.git "provider-upjet-gitea" . | \
-      xargs -r sed -i.bak "s|provider-upjet-gitea|${PROJECT_NAME}|g"
-    grep -rl --exclude-dir=.git "github.com/0xayf/provider-upjet-gitea" . | \
-      xargs -r sed -i.bak "s|github.com/0xayf/provider-upjet-gitea|github.com/${OWNER}/${PROJECT_NAME}|g"
-    grep -rl --exclude-dir=.git "provider-upjet-gitea" . | \
-      xargs -r sed -i.bak "s|provider-upjet-gitea|${PROJECT_NAME}|g"
-    set -o pipefail
-    find . -name "*.bak" -type f -delete
-  fi
 }
 
-if [ "${FORCE_BOOTSTRAP:-}" = "1" ] || [ ! -f "${WORKDIR}/cmd/generator/main.go" ] || [ ! -d "${WORKDIR}/cluster/images/${PROJECT_NAME}" ]; then
-  bootstrap_from_gitea
+apply_project_replacements() {
+  replace_in_files "github.com/${OWNER}/provider-${PROVIDER_NAME_LOWER}" "github.com/${OWNER}/${PROJECT_NAME}"
+  replace_in_files "${OWNER}/provider-${PROVIDER_NAME_LOWER}" "${OWNER}/${PROJECT_NAME}"
+  replace_in_files "github.com/0xayf/provider-upjet-gitea" "github.com/${OWNER}/${PROJECT_NAME}"
+  replace_in_files "provider-upjet-gitea" "${PROJECT_NAME}"
+}
+
+if [[ "${FORCE_BOOTSTRAP:-}" == "1" ]] || [[ ! -f "${WORKDIR}/cmd/generator/main.go" ]] || [[ ! -d "${WORKDIR}/cluster/images/${PROJECT_NAME}" ]]; then
+  bootstrap_from_template
 fi
 
-if [ -n "${OWNER}" ]; then
-  set +o pipefail
-  grep -rl --exclude-dir=.git "github.com/0xayf/provider-upjet-gitea" . | \
-    xargs -r sed -i.bak "s|github.com/0xayf/provider-upjet-gitea|github.com/${OWNER}/${PROJECT_NAME}|g"
-  grep -rl --exclude-dir=.git "provider-upjet-gitea" . | \
-    xargs -r sed -i.bak "s|provider-upjet-gitea|${PROJECT_NAME}|g"
-  grep -rl --exclude-dir=.git "github.com/0xayf/provider-upjet-gitea" . | \
-    xargs -r sed -i.bak "s|github.com/0xayf/provider-upjet-gitea|github.com/${OWNER}/${PROJECT_NAME}|g"
-  grep -rl --exclude-dir=.git "provider-upjet-gitea" . | \
-    xargs -r sed -i.bak "s|provider-upjet-gitea|${PROJECT_NAME}|g"
-  set -o pipefail
-  find . -name "*.bak" -type f -delete
-fi
+apply_project_replacements
 
-if [ "${PROJECT_NAME}" != "provider-${PROVIDER_NAME_LOWER}" ]; then
-  if [ -d "${WORKDIR}/cluster/images/provider-${PROVIDER_NAME_LOWER}" ]; then
+if [[ "${PROJECT_NAME}" != "provider-${PROVIDER_NAME_LOWER}" ]]; then
+  if [[ -d "${WORKDIR}/cluster/images/provider-${PROVIDER_NAME_LOWER}" ]]; then
     mv "${WORKDIR}/cluster/images/provider-${PROVIDER_NAME_LOWER}" "${WORKDIR}/cluster/images/${PROJECT_NAME}"
   fi
 fi
@@ -153,7 +142,7 @@ go mod edit -module "github.com/${OWNER}/${PROJECT_NAME}"
 sed -i.bak "s|^modulePath     = \".*\"|modulePath     = \"github.com/${OWNER}/${PROJECT_NAME}\"|" config/provider.go
 rm -f config/provider.go.bak
 
-if [ "${GENERATE:-false}" = "true" ]; then
+if [[ "${GENERATE:-false}" == "true" ]]; then
   make submodules
   make generate
 fi
