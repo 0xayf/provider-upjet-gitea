@@ -32,6 +32,25 @@ Run unit tests in a Linux container after generating files.
 ./hack/test.sh
 ```
 
+## Build package (Podman)
+Build the provider image and xpkg in a Linux container. Requires a Docker or
+Podman socket. For Podman, ensure the service is running. If no socket exists,
+start one with:
+
+```bash
+podman system service --time=0 unix://$HOME/.local/share/containers/podman/podman.sock &
+```
+
+On macOS, you can also use the Podman machine socket:
+
+```bash
+podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}'
+```
+
+```bash
+VERSION=0.1.0 ./hack/build.sh
+```
+
 ## Publish provider package
 Tag a release (e.g. `v0.1.0`) to publish the provider package to GHCR:
 

@@ -48,6 +48,7 @@ bootstrap_from_gitea() {
     --exclude "LICENSE" \
     --exclude "OWNERS.md" \
     --exclude "hack/bootstrap.sh" \
+    --exclude "hack/build.sh" \
     --exclude "hack/generate.sh" \
     --exclude "hack/test.sh" \
     --exclude "README.md" \
@@ -70,7 +71,7 @@ bootstrap_from_gitea() {
   if [ -f "${WORKDIR}/hack/prepare.sh" ]; then
     sed -i.bak 's/set -euox pipefail/set -uox pipefail/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/| xargs /| xargs -r /g' "${WORKDIR}/hack/prepare.sh"
-    sed -i.bak 's/:!hack\/prepare\.sh/:!hack\/prepare\.sh :!hack\/bootstrap\.sh :!hack\/generate\.sh :!hack\/test\.sh/' "${WORKDIR}/hack/prepare.sh"
+    sed -i.bak 's/:!hack\/prepare\.sh/:!hack\/prepare\.sh :!hack\/bootstrap\.sh :!hack\/build\.sh :!hack\/generate\.sh :!hack\/test\.sh/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/git clean -fd/find . -name "*.bak" -type f -delete/' "${WORKDIR}/hack/prepare.sh"
     sed -i.bak 's/^git mv /mv /' "${WORKDIR}/hack/prepare.sh"
     rm -f "${WORKDIR}/hack/prepare.sh.bak"

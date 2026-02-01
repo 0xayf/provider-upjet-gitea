@@ -6,7 +6,7 @@ set -uox pipefail
 : ${ORGANIZATION_NAME:=$(read -r -p "Organization (e.g., my-org-name): " ORGANIZATION_NAME; echo -n "${ORGANIZATION_NAME}")}
 : ${CRD_ROOT_GROUP:=$(read -r -p "CRD rootGroup (e.g., crossplane.io): " CRD_ROOT_GROUP; echo -n "${CRD_ROOT_GROUP}")}
 
-REPLACE_FILES='./* ./.github :!build/** :!go.* :!hack/prepare.sh :!hack/bootstrap.sh :!hack/generate.sh :!hack/test.sh'
+REPLACE_FILES='./* ./.github :!build/** :!go.* :!hack/prepare.sh :!hack/bootstrap.sh :!hack/build.sh :!hack/generate.sh :!hack/test.sh'
 # shellcheck disable=SC2086
 git grep -l 'template' -- ${REPLACE_FILES} | xargs -r sed -i.bak "s/upjet-provider-template/provider-${PROVIDER_NAME_LOWER}/g"
 # shellcheck disable=SC2086

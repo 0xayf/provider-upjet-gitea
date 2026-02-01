@@ -14,7 +14,7 @@ export TERRAFORM_PROVIDER_SOURCE ?= go-gitea/gitea
 export TERRAFORM_PROVIDER_REPO ?= https://github.com/go-gitea/terraform-provider-gitea
 export TERRAFORM_PROVIDER_VERSION ?= 0.7.0
 export TERRAFORM_PROVIDER_DOWNLOAD_NAME ?= terraform-provider-gitea
-export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://releases.hashicorp.com/$(TERRAFORM_PROVIDER_DOWNLOAD_NAME)/$(TERRAFORM_PROVIDER_VERSION)
+export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://github.com/go-gitea/terraform-provider-gitea/releases/download/v$(TERRAFORM_PROVIDER_VERSION)
 export TERRAFORM_NATIVE_PROVIDER_BINARY ?= terraform-provider-gitea_v0.7.0
 export TERRAFORM_DOCS_PATH ?= docs
 
@@ -95,7 +95,7 @@ fallthrough: submodules
 
 # NOTE(hasheddan): we force image building to happen prior to xpkg build so that
 # we ensure image is present in daemon.
-xpkg.build.$(PROJECT_NAME): build.init do.build.images
+xpkg.build.$(PROJECT_NAME): build.init build.code.platform do.build.images
 
 # Ensure provider binaries exist before image build.
 do.build.images: build.code.platform
