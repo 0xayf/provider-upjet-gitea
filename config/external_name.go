@@ -7,8 +7,34 @@ import (
 // ExternalNameConfigs contains all external name configurations for this
 // provider.
 var ExternalNameConfigs = map[string]config.ExternalName{
-	// Import requires using a randomly generated ID from provider: nl-2e21sda
-	"null_resource": idWithStub(),
+	// Organizations
+	"gitea_org": config.IdentifierFromProvider,
+
+	// Teams and membership
+	"gitea_team":            config.IdentifierFromProvider,
+	"gitea_team_membership": config.IdentifierFromProvider,
+	"gitea_team_members":    config.IdentifierFromProvider,
+
+	// Users
+	"gitea_user": config.IdentifierFromProvider,
+
+	// Repositories
+	"gitea_repository":                  config.IdentifierFromProvider,
+	"gitea_repository_key":              config.IdentifierFromProvider,
+	"gitea_repository_webhook":          config.IdentifierFromProvider,
+	"gitea_repository_branch_protection": config.IdentifierFromProvider,
+	"gitea_repository_actions_secret":   config.IdentifierFromProvider,
+	"gitea_repository_actions_variable": config.IdentifierFromProvider,
+
+	// Tokens and keys
+	"gitea_token":      config.IdentifierFromProvider,
+	"gitea_public_key": config.IdentifierFromProvider,
+	"gitea_gpg_key":    config.IdentifierFromProvider,
+
+	// Other resources
+	"gitea_fork":       config.IdentifierFromProvider,
+	"gitea_git_hook":   config.IdentifierFromProvider,
+	"gitea_oauth2_app": config.IdentifierFromProvider,
 }
 
 func idWithStub() config.ExternalName {
