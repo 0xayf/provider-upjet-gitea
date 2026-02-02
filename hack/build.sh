@@ -16,7 +16,11 @@ if [[ -n "${VERSION:-}" ]]; then
   validate_safe_string "VERSION" "$VERSION"
 fi
 
-BUILD_SCRIPT=$(cat <<'BUILD_EOF'
+# Create temp script file to avoid bash 3.2 heredoc parsing issues
+CONTAINER_SCRIPT=$(mktemp)
+trap "rm -f '$CONTAINER_SCRIPT'" EXIT
+
+cat > "$CONTAINER_SCRIPT" << 'SCRIPT_END'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export GIT_TERMINAL_PROMPT=0
@@ -36,12 +40,12 @@ case "${ARCH}" in
   *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;;
 esac
 
-BUILD_EOF
-)
+SCRIPT_END
 
-BUILD_SCRIPT+="curl -fsSL \"https://go.dev/dl/go${GO_VERSION}.linux-\${GOARCH}.tar.gz\" | tar -C /usr/local -xz"
+# Append Go download with variable expansion
+echo "curl -fsSL \"https://go.dev/dl/go${GO_VERSION}.linux-\${GOARCH}.tar.gz\" | tar -C /usr/local -xz" >> "$CONTAINER_SCRIPT"
 
-BUILD_SCRIPT+=$(cat <<'BUILD_EOF'
+cat >> "$CONTAINER_SCRIPT" << 'SCRIPT_END'
 
 export PATH=/usr/local/go/bin:$PATH
 export PATH="$(go env GOPATH)/bin:$PATH"
@@ -57,8 +61,7 @@ log_step "Building xpkg..."
 make xpkg.build
 
 echo "Build completed successfully."
-BUILD_EOF
-)
+SCRIPT_END
 
 run_in_container() {
   local runtime="$1"
@@ -83,7 +86,7 @@ run_in_container() {
   
   run_args+=("${IMAGE}")
   
-  "$runtime" run "${run_args[@]}" bash -c "$BUILD_SCRIPT"
+  "$runtime" run "${run_args[@]}" bash -l < "$CONTAINER_SCRIPT"
 }
 
 if is_macos_podman; then

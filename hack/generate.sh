@@ -20,7 +20,11 @@ fi
 
 validate_safe_string "OWNER" "$OWNER"
 
-GENERATE_SCRIPT=$(cat <<'GENERATE_EOF'
+# Create temp script file to avoid bash 3.2 heredoc parsing issues
+CONTAINER_SCRIPT=$(mktemp)
+trap "rm -f '$CONTAINER_SCRIPT'" EXIT
+
+cat > "$CONTAINER_SCRIPT" << 'SCRIPT_END'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export GIT_TERMINAL_PROMPT=0
@@ -40,12 +44,12 @@ case "${ARCH}" in
   *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;;
 esac
 
-GENERATE_EOF
-)
+SCRIPT_END
 
-GENERATE_SCRIPT+="curl -fsSL \"https://go.dev/dl/go${GO_VERSION}.linux-\${GOARCH}.tar.gz\" | tar -C /usr/local -xz"
+# Append Go download with variable expansion
+echo "curl -fsSL \"https://go.dev/dl/go${GO_VERSION}.linux-\${GOARCH}.tar.gz\" | tar -C /usr/local -xz" >> "$CONTAINER_SCRIPT"
 
-GENERATE_SCRIPT+=$(cat <<'GENERATE_EOF'
+cat >> "$CONTAINER_SCRIPT" << 'SCRIPT_END'
 
 export PATH=/usr/local/go/bin:$PATH
 go install golang.org/x/tools/cmd/goimports@latest
@@ -89,14 +93,13 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git status -sb
   git diff --stat
 fi
-GENERATE_EOF
-)
+SCRIPT_END
 
 run_in_container() {
   local runtime="$1"
   
   local run_args=(
-    --rm -it
+    --rm -i
     -v "${PWD}:/workspace"
     -w /workspace
     -e "OWNER=${OWNER}"
@@ -113,7 +116,7 @@ run_in_container() {
   
   run_args+=("${IMAGE}")
   
-  "$runtime" run "${run_args[@]}" bash -lc "$GENERATE_SCRIPT"
+  "$runtime" run "${run_args[@]}" bash -l < "$CONTAINER_SCRIPT"
 }
 
 RUNTIME="$(detect_container_runtime)"
