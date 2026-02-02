@@ -1,0 +1,46 @@
+apiVersion: git.gitea.m.crossplane.io/v1alpha1
+kind: Hook
+metadata:
+  annotations:
+    meta.upbound.io/example-id: git/v1alpha1/hook
+  labels:
+    testing.upbound.io/example-name: org_repo_post_receive
+  name: org-repo-post-receive
+  namespace: crossplane-system
+spec:
+  forProvider:
+    content: ${file("${path.module}/post-receive.sh")}
+    name: post-receive
+    repo: repository-test
+    user: org-example-org
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: git/v1alpha1/hook
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: git-hook-example-org
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: git/v1alpha1/hook
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: git-hook-example-repo
+    username: git-hook-example-org

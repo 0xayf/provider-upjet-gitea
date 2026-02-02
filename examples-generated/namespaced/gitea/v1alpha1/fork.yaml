@@ -1,0 +1,59 @@
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Fork
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/fork
+  labels:
+    testing.upbound.io/example-name: user_fork_of_repo1_in_org1
+  name: user-fork-of-repo1-in-org1
+  namespace: crossplane-system
+spec:
+  forProvider:
+    owner: org-example-org
+    repo: repository-test
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/fork
+  labels:
+    testing.upbound.io/example-name: org1
+  name: org1
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: org1
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/fork
+  labels:
+    testing.upbound.io/example-name: org2
+  name: org2
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: org2
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/fork
+  labels:
+    testing.upbound.io/example-name: repo1_in_org1
+  name: repo1-in-org1
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: repo1-in-org1
+    username: org1

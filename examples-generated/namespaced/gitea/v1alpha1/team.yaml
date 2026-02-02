@@ -1,0 +1,50 @@
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Team
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/team
+  labels:
+    testing.upbound.io/example-name: test_team
+  name: test-team
+  namespace: crossplane-system
+spec:
+  forProvider:
+    description: Devs of Test Org
+    name: Devs
+    organisation: org-example-org
+    permission: write
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/team
+  labels:
+    testing.upbound.io/example-name: test_org
+  name: test-org
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: team-example-org
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/team
+  labels:
+    testing.upbound.io/example-name: test
+  name: test
+  namespace: crossplane-system
+spec:
+  forProvider:
+    gitignores: Go
+    issueLabels: Default
+    license: MIT
+    name: team-example-repo
+    private: true
+    username: team-example-org

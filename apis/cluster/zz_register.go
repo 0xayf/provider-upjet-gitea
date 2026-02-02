@@ -10,7 +10,14 @@ package cluster
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/cluster/v1alpha1"
+	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/cluster/git/v1alpha1"
+	v1alpha1gitea "github.com/0xayf/provider-upjet-gitea/apis/cluster/gitea/v1alpha1"
+	v1alpha1gpg "github.com/0xayf/provider-upjet-gitea/apis/cluster/gpg/v1alpha1"
+	v1alpha1oauth2 "github.com/0xayf/provider-upjet-gitea/apis/cluster/oauth2/v1alpha1"
+	v1alpha1public "github.com/0xayf/provider-upjet-gitea/apis/cluster/public/v1alpha1"
+	v1alpha1repository "github.com/0xayf/provider-upjet-gitea/apis/cluster/repository/v1alpha1"
+	v1alpha1team "github.com/0xayf/provider-upjet-gitea/apis/cluster/team/v1alpha1"
+	v1alpha1cluster "github.com/0xayf/provider-upjet-gitea/apis/cluster/v1alpha1"
 	v1beta1 "github.com/0xayf/provider-upjet-gitea/apis/cluster/v1beta1"
 )
 
@@ -18,6 +25,13 @@ func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes,
 		v1alpha1.SchemeBuilder.AddToScheme,
+		v1alpha1gitea.SchemeBuilder.AddToScheme,
+		v1alpha1gpg.SchemeBuilder.AddToScheme,
+		v1alpha1oauth2.SchemeBuilder.AddToScheme,
+		v1alpha1public.SchemeBuilder.AddToScheme,
+		v1alpha1repository.SchemeBuilder.AddToScheme,
+		v1alpha1team.SchemeBuilder.AddToScheme,
+		v1alpha1cluster.SchemeBuilder.AddToScheme,
 		v1beta1.SchemeBuilder.AddToScheme,
 	)
 }

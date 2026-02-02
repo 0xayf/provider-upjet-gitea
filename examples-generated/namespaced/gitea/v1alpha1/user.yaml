@@ -1,0 +1,18 @@
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: User
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/user
+  labels:
+    testing.upbound.io/example-name: test
+  name: test
+  namespace: crossplane-system
+spec:
+  forProvider:
+    email: user-test@user.dev
+    loginName: user-test
+    mustChangePassword: false
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+    username: user-test

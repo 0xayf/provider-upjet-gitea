@@ -1,0 +1,28 @@
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/org
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: org-example-org
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/org
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: org-example-repo
+    username: org-example-org

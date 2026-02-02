@@ -1,0 +1,64 @@
+apiVersion: team.gitea.crossplane.io/v1alpha1
+kind: Members
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/members
+  labels:
+    testing.upbound.io/example-name: example_members
+  name: example-members
+spec:
+  forProvider:
+    members: '${[for user in gitea_user.example_users : user.username]}'
+    teamId: ${gitea_team.example_team.id}
+
+---
+
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/members
+  labels:
+    testing.upbound.io/example-name: example_org
+  name: example-org
+spec:
+  forProvider:
+    name: members_example_org
+
+---
+
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: Team
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/members
+  labels:
+    testing.upbound.io/example-name: example_team
+  name: example-team
+spec:
+  forProvider:
+    description: An example of team membership
+    name: members_example_team
+    organisation: members_example_org
+    permission: read
+
+---
+
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: User
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/members
+  labels:
+    testing.upbound.io/example-name: example_users
+  name: example-users
+spec:
+  forProvider:
+    count: 5
+    email: members_example_user_${count.index}@user.dev
+    loginName: members_example_user_${count.index}
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+      namespace: upbound-system
+    username: members_example_user_${count.index}

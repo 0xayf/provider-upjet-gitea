@@ -1,0 +1,52 @@
+apiVersion: repository.gitea.m.crossplane.io/v1alpha1
+kind: Key
+metadata:
+  annotations:
+    meta.upbound.io/example-id: repository/v1alpha1/key
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    key: ${tls_private_key.example.public_key_openssh}
+    readOnly: true
+    repository: ${gitea_repository.example.id}
+    title: Example Deploy Key
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: repository/v1alpha1/key
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: example
+    private: true
+    username: repo_key_example_user
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: User
+metadata:
+  annotations:
+    meta.upbound.io/example-id: repository/v1alpha1/key
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    email: repo_key_example_user@user.dev
+    loginName: repo_key_example_user
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+    username: repo_key_example_user

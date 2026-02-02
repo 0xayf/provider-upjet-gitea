@@ -1,0 +1,13 @@
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: Token
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/token
+  labels:
+    testing.upbound.io/example-name: test_token
+  name: test-token
+spec:
+  forProvider:
+    name: test_token
+    scopes:
+    - all

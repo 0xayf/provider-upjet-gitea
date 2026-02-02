@@ -1,0 +1,68 @@
+apiVersion: team.gitea.m.crossplane.io/v1alpha1
+kind: Membership
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/membership
+  labels:
+    testing.upbound.io/example-name: example_team_memberships
+  name: example-team-memberships
+  namespace: crossplane-system
+spec:
+  forProvider:
+    for_each: '${{ for user in gitea_user.example_users : user.username => user }}'
+    teamId: ${gitea_team.example_team.id}
+    username: ${each.value["username"]}
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Org
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/membership
+  labels:
+    testing.upbound.io/example-name: example_org
+  name: example-org
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: membership_example_org
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: Team
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/membership
+  labels:
+    testing.upbound.io/example-name: example_team
+  name: example-team
+  namespace: crossplane-system
+spec:
+  forProvider:
+    description: An example team for membership testing
+    name: membership_example_team
+    organisation: membership_example_org
+    permission: read
+
+---
+
+apiVersion: gitea.gitea.m.crossplane.io/v1alpha1
+kind: User
+metadata:
+  annotations:
+    meta.upbound.io/example-id: team/v1alpha1/membership
+  labels:
+    testing.upbound.io/example-name: example_users
+  name: example-users
+  namespace: crossplane-system
+spec:
+  forProvider:
+    count: 5
+    email: membership_example_user_${count.index}@user.dev
+    loginName: membership_example_user_${count.index}
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+    username: membership_example_user_${count.index}

@@ -1,0 +1,36 @@
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: Repository
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/repository
+  labels:
+    testing.upbound.io/example-name: test
+  name: test
+spec:
+  forProvider:
+    gitignores: Go
+    issueLabels: Default
+    license: MIT
+    name: repository-test
+    private: true
+    username: user-test
+
+---
+
+apiVersion: gitea.gitea.crossplane.io/v1alpha1
+kind: User
+metadata:
+  annotations:
+    meta.upbound.io/example-id: gitea/v1alpha1/repository
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    email: repo_example_user@user.dev
+    loginName: repo_example_user
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+      namespace: upbound-system
+    username: repo_example_user

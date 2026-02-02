@@ -10,7 +10,14 @@ package namespaced
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/v1alpha1"
+	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/git/v1alpha1"
+	v1alpha1gitea "github.com/0xayf/provider-upjet-gitea/apis/namespaced/gitea/v1alpha1"
+	v1alpha1gpg "github.com/0xayf/provider-upjet-gitea/apis/namespaced/gpg/v1alpha1"
+	v1alpha1oauth2 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/oauth2/v1alpha1"
+	v1alpha1public "github.com/0xayf/provider-upjet-gitea/apis/namespaced/public/v1alpha1"
+	v1alpha1repository "github.com/0xayf/provider-upjet-gitea/apis/namespaced/repository/v1alpha1"
+	v1alpha1team "github.com/0xayf/provider-upjet-gitea/apis/namespaced/team/v1alpha1"
+	v1alpha1namespaced "github.com/0xayf/provider-upjet-gitea/apis/namespaced/v1alpha1"
 	v1beta1 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/v1beta1"
 )
 
@@ -18,6 +25,13 @@ func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes,
 		v1alpha1.SchemeBuilder.AddToScheme,
+		v1alpha1gitea.SchemeBuilder.AddToScheme,
+		v1alpha1gpg.SchemeBuilder.AddToScheme,
+		v1alpha1oauth2.SchemeBuilder.AddToScheme,
+		v1alpha1public.SchemeBuilder.AddToScheme,
+		v1alpha1repository.SchemeBuilder.AddToScheme,
+		v1alpha1team.SchemeBuilder.AddToScheme,
+		v1alpha1namespaced.SchemeBuilder.AddToScheme,
 		v1beta1.SchemeBuilder.AddToScheme,
 	)
 }
