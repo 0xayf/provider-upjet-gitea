@@ -57,6 +57,18 @@ log_step "Initializing git submodules..."
 git submodule sync
 git submodule update --init --recursive
 
+mkdir -p .work
+LOG_PATH=".work/build-test.log"
+
+log_step "Running unit tests..."
+if make test >"${LOG_PATH}" 2>&1; then
+  echo "Tests completed successfully."
+else
+  echo "Tests failed. See ${LOG_PATH}." >&2
+  tail -n 200 "${LOG_PATH}" >&2
+  exit 1
+fi
+
 log_step "Building xpkg..."
 make xpkg.build
 

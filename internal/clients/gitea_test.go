@@ -6,6 +6,7 @@ import (
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	ktypes "k8s.io/apimachinery/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -39,14 +40,14 @@ func TestResolveLegacyProviderConfig(t *testing.T) {
 			Credentials: clusterv1beta1.ProviderCredentials{
 				Source: xpv1.CredentialsSourceSecret,
 				CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
-					SecretRef: &xpv1.SecretKeySelector{Name: "provider-secret", Namespace: "crossplane-system", Key: "credentials"},
+					SecretRef: &xpv1.SecretKeySelector{SecretReference: xpv1.SecretReference{Name: "provider-secret", Namespace: "crossplane-system"}, Key: "credentials"},
 				},
 			},
 		},
 	}
 
-	mg := &clustergitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo"}}
-	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "default"})
+	mg := &clustergitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", UID: ktypes.UID("repo-legacy-uid")}}
+	mg.SetProviderConfigReference(&xpv1.Reference{Name: "default"})
 
 	c := ctrlclientfake.NewClientBuilder().WithScheme(s).WithObjects(pc).Build()
 
@@ -75,14 +76,14 @@ func TestResolveModernNamespacedProviderConfigPreservesSecretNamespace(t *testin
 			Credentials: namespacedv1beta1.ProviderCredentials{
 				Source: xpv1.CredentialsSourceSecret,
 				CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
-					SecretRef: &xpv1.SecretKeySelector{Name: "crossplane-gitea-token", Namespace: "gitea", Key: "credentials"},
+					SecretRef: &xpv1.SecretKeySelector{SecretReference: xpv1.SecretReference{Name: "crossplane-gitea-token", Namespace: "gitea"}, Key: "credentials"},
 				},
 			},
 		},
 	}
 
-	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "crossplane-examples"}}
-	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "app-pc", Kind: "ProviderConfig"})
+	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "crossplane-examples", UID: ktypes.UID("repo-ns-uid")}}
+	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "app-pc", Kind: namespacedv1beta1.ProviderConfigKind})
 
 	c := ctrlclientfake.NewClientBuilder().WithScheme(s).WithObjects(pc).Build()
 
@@ -108,14 +109,14 @@ func TestResolveModernClusterProviderConfig(t *testing.T) {
 			Credentials: namespacedv1beta1.ProviderCredentials{
 				Source: xpv1.CredentialsSourceSecret,
 				CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
-					SecretRef: &xpv1.SecretKeySelector{Name: "crossplane-gitea-token", Namespace: "gitea", Key: "credentials"},
+					SecretRef: &xpv1.SecretKeySelector{SecretReference: xpv1.SecretReference{Name: "crossplane-gitea-token", Namespace: "gitea"}, Key: "credentials"},
 				},
 			},
 		},
 	}
 
-	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "crossplane-examples"}}
-	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "cluster-pc", Kind: "ClusterProviderConfig"})
+	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", UID: ktypes.UID("repo-cluster-uid")}}
+	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "cluster-pc", Kind: namespacedv1beta1.ClusterProviderConfigKind})
 
 	c := ctrlclientfake.NewClientBuilder().WithScheme(s).WithObjects(pc).Build()
 
