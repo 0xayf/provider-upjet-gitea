@@ -11,8 +11,8 @@ import (
 
 	"github.com/crossplane/upjet/v2/pkg/terraform"
 
-	clusterv1beta1 "github.com/crossplane/upjet-provider-template/apis/cluster/v1beta1"
-	namespacedv1beta1 "github.com/crossplane/upjet-provider-template/apis/namespaced/v1beta1"
+	clusterv1beta1 "github.com/0xayf/provider-upjet-gitea/apis/cluster/v1beta1"
+	namespacedv1beta1 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/v1beta1"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	errGetProviderConfig    = "cannot get referenced ProviderConfig"
 	errTrackUsage           = "cannot track ProviderConfig usage"
 	errExtractCredentials   = "cannot extract credentials"
-	errUnmarshalCredentials = "cannot unmarshal template credentials as JSON"
+	errUnmarshalCredentials = "cannot unmarshal provider credentials as JSON"
 )
 
 // TerraformSetupBuilder builds Terraform a terraform.SetupFn function which
@@ -128,7 +128,7 @@ func resolveModern(ctx context.Context, crClient client.Client, mg resource.Mode
 	switch pc := pcObj.(type) {
 	case *namespacedv1beta1.ProviderConfig:
 		pcSpec = pc.Spec
-		if pcSpec.Credentials.SecretRef != nil {
+		if pcSpec.Credentials.SecretRef != nil && pcSpec.Credentials.SecretRef.Namespace == "" {
 			pcSpec.Credentials.SecretRef.Namespace = mg.GetNamespace()
 		}
 	case *namespacedv1beta1.ClusterProviderConfig:

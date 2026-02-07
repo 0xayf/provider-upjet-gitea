@@ -24,6 +24,11 @@ jobs:
           go-version: "1.24.x"
           check-latest: true
 
+      - name: Run unit tests
+        run: |
+          make submodules
+          go test ./...
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
