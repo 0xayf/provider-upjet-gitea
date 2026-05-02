@@ -141,7 +141,7 @@ func TestTerraformSetupBuilderUsesTokenCredentials(t *testing.T) {
 	s := testScheme(t)
 
 	credentials := map[string]string{
-		"base_url": "http://gitea-http.gitea.svc.cluster.local:3000",
+		"base_url": "https://gitea.example.com",
 		"token":    "test-token",
 	}
 	rawCredentials, err := json.Marshal(credentials)
@@ -191,5 +191,111 @@ func TestTerraformSetupBuilderUsesTokenCredentials(t *testing.T) {
 	}
 	if _, found := got.Configuration["password"]; found {
 		t.Fatalf("did not expect password when token is provided")
+	}
+}
+
+func TestTerraformSetupBuilderEndpointPrecedence(t *testing.T) {
+	s := testScheme(t)
+
+	// Credentials secret carries a base_url that should be ignored when
+	// ProviderConfig.spec.endpoint is set. Use the reserved .invalid TLD
+	// so the value is unambiguously the "should not be used" one.
+	credentials := map[string]string{
+		"base_url": "http://should-not-be-used.invalid",
+		"username": "svc-ci-bot",
+		"password": "p4ssw0rd",
+	}
+	rawCredentials, err := json.Marshal(credentials)
+	if err != nil {
+		t.Fatalf("marshal credentials: %v", err)
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "ci-bot-credentials", Namespace: "gitea"},
+		Data: map[string][]byte{
+			"credentials": rawCredentials,
+		},
+	}
+
+	pc := &namespacedv1beta1.ProviderConfig{
+		TypeMeta:   metav1.TypeMeta{APIVersion: namespacedv1beta1.SchemeGroupVersion.String(), Kind: "ProviderConfig"},
+		ObjectMeta: metav1.ObjectMeta{Name: "ci-bot-pc", Namespace: "gitea"},
+		Spec: namespacedv1beta1.ProviderConfigSpec{
+			Endpoint: "https://gitea.example.com",
+			Credentials: namespacedv1beta1.ProviderCredentials{
+				Source: xpv1.CredentialsSourceSecret,
+				CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
+					SecretRef: &xpv1.SecretKeySelector{SecretReference: xpv1.SecretReference{Name: "ci-bot-credentials", Namespace: "gitea"}, Key: "credentials"},
+				},
+			},
+		},
+	}
+
+	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "gitea", UID: ktypes.UID("repo-endpoint-uid")}}
+	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "ci-bot-pc", Kind: namespacedv1beta1.ProviderConfigKind})
+
+	c := ctrlclientfake.NewClientBuilder().WithScheme(s).WithObjects(pc, secret).Build()
+
+	setupFn := TerraformSetupBuilder("v1", "registry.terraform.io/go-gitea/gitea", "0.7.0")
+	got, err := setupFn(context.Background(), c, mg)
+	if err != nil {
+		t.Fatalf("build terraform setup: %v", err)
+	}
+
+	if got.Configuration["base_url"] != "https://gitea.example.com" {
+		t.Fatalf("expected endpoint to win over creds.base_url, got %v", got.Configuration["base_url"])
+	}
+	if got.Configuration["username"] != "svc-ci-bot" {
+		t.Fatalf("unexpected username: %v", got.Configuration["username"])
+	}
+	if got.Configuration["password"] != "p4ssw0rd" {
+		t.Fatalf("unexpected password: %v", got.Configuration["password"])
+	}
+}
+
+func TestTerraformSetupBuilderEndpointFallbackToCredentials(t *testing.T) {
+	s := testScheme(t)
+
+	credentials := map[string]string{
+		"base_url": "http://from-creds.local",
+		"token":    "tok",
+	}
+	rawCredentials, err := json.Marshal(credentials)
+	if err != nil {
+		t.Fatalf("marshal credentials: %v", err)
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "legacy-token", Namespace: "gitea"},
+		Data:       map[string][]byte{"credentials": rawCredentials},
+	}
+
+	pc := &namespacedv1beta1.ProviderConfig{
+		TypeMeta:   metav1.TypeMeta{APIVersion: namespacedv1beta1.SchemeGroupVersion.String(), Kind: "ProviderConfig"},
+		ObjectMeta: metav1.ObjectMeta{Name: "legacy-pc", Namespace: "gitea"},
+		Spec: namespacedv1beta1.ProviderConfigSpec{
+			// no Endpoint - exercise back-compat path
+			Credentials: namespacedv1beta1.ProviderCredentials{
+				Source: xpv1.CredentialsSourceSecret,
+				CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
+					SecretRef: &xpv1.SecretKeySelector{SecretReference: xpv1.SecretReference{Name: "legacy-token", Namespace: "gitea"}, Key: "credentials"},
+				},
+			},
+		},
+	}
+
+	mg := &namespacedgitea.Repository{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "gitea", UID: ktypes.UID("repo-fallback-uid")}}
+	mg.SetProviderConfigReference(&xpv1.ProviderConfigReference{Name: "legacy-pc", Kind: namespacedv1beta1.ProviderConfigKind})
+
+	c := ctrlclientfake.NewClientBuilder().WithScheme(s).WithObjects(pc, secret).Build()
+
+	setupFn := TerraformSetupBuilder("v1", "registry.terraform.io/go-gitea/gitea", "0.7.0")
+	got, err := setupFn(context.Background(), c, mg)
+	if err != nil {
+		t.Fatalf("build terraform setup: %v", err)
+	}
+
+	if got.Configuration["base_url"] != "http://from-creds.local" {
+		t.Fatalf("expected fallback base_url from creds, got %v", got.Configuration["base_url"])
 	}
 }

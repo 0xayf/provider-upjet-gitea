@@ -51,7 +51,11 @@ func TerraformSetupBuilder(version, providerSource, providerVersion string) terr
 		}
 
 		ps.Configuration = map[string]any{}
-		if baseURL := creds["base_url"]; baseURL != "" {
+		// Prefer ProviderConfig.spec.endpoint; fall back to base_url in the
+		// credentials secret for back-compat with the older shape.
+		if pcSpec.Endpoint != "" {
+			ps.Configuration["base_url"] = pcSpec.Endpoint
+		} else if baseURL := creds["base_url"]; baseURL != "" {
 			ps.Configuration["base_url"] = baseURL
 		}
 		if token := creds["token"]; token != "" {

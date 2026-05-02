@@ -8,6 +8,12 @@ import (
 
 // A ProviderConfigSpec defines the desired state of a ProviderConfig.
 type ProviderConfigSpec struct {
+	// Endpoint is the Gitea server base URL (e.g. https://git.example.com).
+	// When set, takes precedence over a `base_url` key in the credentials
+	// secret. The credentials key remains supported for back-compat.
+	// +kubebuilder:validation:Optional
+	Endpoint string `json:"endpoint,omitempty"`
+
 	// Credentials required to authenticate to this provider.
 	Credentials ProviderCredentials `json:"credentials"`
 }

@@ -107,6 +107,12 @@ spec:
                 required:
                 - source
                 type: object
+              endpoint:
+                description: |-
+                  Endpoint is the Gitea server base URL (e.g. https://git.example.com).
+                  When set, takes precedence over a `base_url` key in the credentials
+                  secret. The credentials key remains supported for back-compat.
+                type: string
             required:
             - credentials
             type: object
