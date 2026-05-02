@@ -226,11 +226,15 @@ func main() {
 			MaxConcurrentReconciles: 1,
 		}), "Cannot setup CRD gate")
 		kingpin.FatalIfError(controllerCluster.SetupGated(mgr, clusterOpts), "Cannot setup cluster-scoped Gitea controllers")
+		kingpin.FatalIfError(controllerCluster.SetupCustomGated(mgr, clusterOpts), "Cannot setup cluster-scoped custom Gitea controllers")
 		kingpin.FatalIfError(controllerNamespaced.SetupGated(mgr, namespacedOpts), "Cannot setup namespaced Gitea controllers")
+		kingpin.FatalIfError(controllerNamespaced.SetupCustomGated(mgr, namespacedOpts), "Cannot setup namespaced custom Gitea controllers")
 	} else {
 		log.Info("Provider has missing RBAC permissions for watching CRDs, controller SafeStart capability will be disabled")
 		kingpin.FatalIfError(controllerCluster.Setup(mgr, clusterOpts), "Cannot setup cluster-scoped Gitea controllers")
+		kingpin.FatalIfError(controllerCluster.SetupCustom(mgr, clusterOpts), "Cannot setup cluster-scoped custom Gitea controllers")
 		kingpin.FatalIfError(controllerNamespaced.Setup(mgr, namespacedOpts), "Cannot setup namespaced Gitea controllers")
+		kingpin.FatalIfError(controllerNamespaced.SetupCustom(mgr, namespacedOpts), "Cannot setup namespaced custom Gitea controllers")
 	}
 
 	kingpin.FatalIfError(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
