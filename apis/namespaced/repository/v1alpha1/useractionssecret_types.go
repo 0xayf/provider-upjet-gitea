@@ -16,6 +16,17 @@ import (
 type UserActionsSecretObservation struct {
 	// CreatedAt is the time the secret was created in Gitea.
 	CreatedAt *string `json:"createdAt,omitempty"`
+
+	// Existed is set to true once the controller has successfully PUT the
+	// secret to Gitea. Gitea's /user/actions/secrets endpoint does not
+	// expose a list or get operation, so the controller cannot otherwise
+	// detect existence of a previously-created user-scoped secret.
+	Existed *bool `json:"existed,omitempty"`
+
+	// ValueHash is a SHA-256 of the secret value last pushed to Gitea. Used
+	// to detect value rotation so the controller can re-push the new
+	// value to Gitea via Update.
+	ValueHash *string `json:"valueHash,omitempty"`
 }
 
 // UserActionsSecretParameters define the desired state of a user-scoped Gitea

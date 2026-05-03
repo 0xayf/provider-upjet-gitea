@@ -16,6 +16,12 @@ import (
 type OrgActionsSecretObservation struct {
 	// CreatedAt is the time the secret was created in Gitea.
 	CreatedAt *string `json:"createdAt,omitempty"`
+
+	// ValueHash is a SHA-256 of the secret value last pushed to Gitea. The
+	// controller compares this against the current source secret's hash to
+	// detect when a value rotation should re-push to Gitea (Gitea's API
+	// does not expose the secret value for a direct comparison).
+	ValueHash *string `json:"valueHash,omitempty"`
 }
 
 // OrgActionsSecretParameters define the desired state of an organisation-scoped

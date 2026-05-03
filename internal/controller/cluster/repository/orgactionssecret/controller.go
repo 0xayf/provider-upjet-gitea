@@ -6,6 +6,8 @@ package orgactionssecret
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
@@ -110,8 +112,17 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	if got == nil {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
-	cr.Status.AtProvider = v1alpha1.OrgActionsSecretObservation{CreatedAt: stringPtr(got.CreatedAt)}
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	value, err := readValueSecret(ctx, e.kube, cr.Spec.ForProvider.SecretValueSecretRef.Namespace, cr.Spec.ForProvider.SecretValueSecretRef.Name, cr.Spec.ForProvider.SecretValueSecretRef.Key)
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	currentHash := hashValue(value)
+	upToDate := cr.Status.AtProvider.ValueHash != nil && *cr.Status.AtProvider.ValueHash == currentHash
+
+	previousHash := cr.Status.AtProvider.ValueHash
+	cr.Status.AtProvider.CreatedAt = stringPtr(got.CreatedAt)
+	cr.Status.AtProvider.ValueHash = previousHash
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.ExternalCreation, error) {
@@ -126,6 +137,7 @@ func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.E
 	if err := e.api.Put(ctx, scopeFor(cr), secretName(cr), value); err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errPut)
 	}
+	cr.Status.AtProvider.ValueHash = stringPtr(hashValue(value))
 	return managed.ExternalCreation{}, nil
 }
 
@@ -141,7 +153,15 @@ func (e *external) Update(ctx context.Context, mg xpresource.Managed) (managed.E
 	if err := e.api.Put(ctx, scopeFor(cr), secretName(cr), value); err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errPut)
 	}
+	cr.Status.AtProvider.ValueHash = stringPtr(hashValue(value))
 	return managed.ExternalUpdate{}, nil
+}
+
+// hashValue returns the hex SHA-256 of v, used as a stable fingerprint of
+// the secret value.
+func hashValue(v string) string {
+	sum := sha256.Sum256([]byte(v))
+	return hex.EncodeToString(sum[:])
 }
 
 func (e *external) Delete(ctx context.Context, mg xpresource.Managed) (managed.ExternalDelete, error) {

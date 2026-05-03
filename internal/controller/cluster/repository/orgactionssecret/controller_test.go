@@ -6,6 +6,8 @@ package orgactionssecret
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
@@ -17,6 +19,12 @@ import (
 	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/cluster/repository/v1alpha1"
 	"github.com/0xayf/provider-upjet-gitea/internal/clients"
 )
+
+func stringPtrFromHashOf(s string) *string {
+	sum := sha256.Sum256([]byte(s))
+	h := hex.EncodeToString(sum[:])
+	return &h
+}
 
 type fakeAPI struct {
 	getResp     *clients.ActionsSecretResource
@@ -79,13 +87,33 @@ func newCR() *v1alpha1.OrgActionsSecret {
 	}
 }
 
-func TestObserve_Exists(t *testing.T) {
+func TestObserve_Exists_AndUpToDate_WhenHashMatches(t *testing.T) {
 	cr := newCR()
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("the-value")
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "src-ns"},
+		Data:       map[string][]byte{"token": []byte("the-value")},
+	}
 	api := &fakeAPI{getResp: &clients.ActionsSecretResource{Name: "CI_BOT_TOKEN", CreatedAt: "2026-01-01T00:00:00Z"}}
-	e := &external{api: api}
+	e := &external{kube: newKube(t, src).Build(), api: api}
 	got, _ := e.Observe(context.Background(), cr)
 	if !got.ResourceExists || !got.ResourceUpToDate {
 		t.Fatalf("expected exists+uptodate, got: %+v", got)
+	}
+}
+
+func TestObserve_NotUpToDate_WhenHashDiffers(t *testing.T) {
+	cr := newCR()
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("original")
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "src-ns"},
+		Data:       map[string][]byte{"token": []byte("rotated")},
+	}
+	api := &fakeAPI{getResp: &clients.ActionsSecretResource{Name: "CI_BOT_TOKEN"}}
+	e := &external{kube: newKube(t, src).Build(), api: api}
+	got, _ := e.Observe(context.Background(), cr)
+	if !got.ResourceExists || got.ResourceUpToDate {
+		t.Fatalf("expected exists but not up-to-date, got: %+v", got)
 	}
 }
 

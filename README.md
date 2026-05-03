@@ -11,7 +11,7 @@ This provider exposes 39 CRDs across 8 API groups, supporting both cluster-scope
 | API Group | Resources | Scope |
 |-----------|-----------|-------|
 | `gitea.gitea.crossplane.io` | Org, Repository, Team, Token, User, Fork | Cluster |
-| `repository.gitea.crossplane.io` | ActionsSecret, ActionsVariable, BranchProtection, Key, Webhook | Cluster |
+| `repository.gitea.crossplane.io` | ActionsSecret, ActionsVariable, BranchProtection, Key, OrgActionsSecret, UserActionsSecret, Webhook | Cluster |
 | `team.gitea.crossplane.io` | Members, Membership | Cluster |
 | `git.gitea.crossplane.io` | Hook | Cluster |
 | `gpg.gitea.crossplane.io` | Key | Cluster |
@@ -166,7 +166,7 @@ spec:
 ```
 
 #### ActionsSecret
-Repository-level secrets for CI/CD.
+Repository-scoped Actions secret. Visible to workflows in that one repo.
 
 ```yaml
 apiVersion: repository.gitea.crossplane.io/v1alpha1
@@ -175,13 +175,65 @@ metadata:
   name: registry-secret
 spec:
   forProvider:
-    repositoryRef:
-      name: my-repo
+    repositoryOwner: my-org
+    repository: my-repo
     secretName: REGISTRY_TOKEN
     secretValueSecretRef:
       name: registry-creds
+      namespace: default
       key: token
 ```
+
+#### OrgActionsSecret
+Organization-scoped Actions secret. Visible to workflows in any repo under
+the organisation. The principal in the referenced ProviderConfig must have
+org-owner rights (or be a site admin).
+
+```yaml
+apiVersion: repository.gitea.crossplane.io/v1alpha1
+kind: OrgActionsSecret
+metadata:
+  name: shared-deploy-key
+spec:
+  forProvider:
+    org: my-org
+    secretName: SHARED_DEPLOY_KEY
+    secretValueSecretRef:
+      name: deploy-key-source
+      namespace: default
+      key: token
+```
+
+The controller hashes the source secret value (SHA-256) on each Create/Update
+and records it in `status.atProvider.valueHash`. Subsequent Observe calls
+re-hash the current source value and compare; if it has changed, the
+controller calls Update to re-push the new value to Gitea. This is the only
+way to detect rotation, since Gitea's API does not expose secret values for
+direct comparison.
+
+#### UserActionsSecret
+User-scoped Actions secret on the authenticated user's account. Only useful
+for workflows in repositories owned directly by that user.
+
+```yaml
+apiVersion: repository.gitea.crossplane.io/v1alpha1
+kind: UserActionsSecret
+metadata:
+  name: my-self-token
+spec:
+  forProvider:
+    secretName: SELF_TOKEN
+    secretValueSecretRef:
+      name: self-token-source
+      namespace: default
+      key: token
+```
+
+The user is determined by the credentials of the referenced ProviderConfig.
+Gitea's `/user/actions/secrets` endpoint operates on the authenticated user
+and exposes neither GET nor LIST, so the controller tracks creation locally
+via `status.atProvider.existed` after a successful Create. Value rotation is
+detected via the same SHA-256 hash mechanism as OrgActionsSecret.
 
 ### Team Resources (`team.gitea.crossplane.io`)
 
@@ -250,6 +302,7 @@ kind: ProviderConfig
 metadata:
   name: gitea-provider-config
 spec:
+  endpoint: https://gitea.example.com
   credentials:
     source: Secret
     secretRef:
@@ -258,13 +311,27 @@ spec:
       key: credentials
 ```
 
-The secret should contain:
+`spec.endpoint` is the Gitea server URL. The credentials secret should
+contain only authentication material:
+
 ```json
 {
-  "base_url": "https://gitea.example.com",
   "token": "your-access-token"
 }
 ```
+
+or for username/password authentication (required by `Token` resources):
+
+```json
+{
+  "username": "admin",
+  "password": "your-password"
+}
+```
+
+Back-compat: a `base_url` key in the credentials secret is still honoured
+when `spec.endpoint` is unset, so existing ProviderConfigs of the older
+shape continue to work.
 
 ## Development
 

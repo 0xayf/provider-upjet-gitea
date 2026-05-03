@@ -6,6 +6,8 @@ package orgactionssecret
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -103,12 +105,22 @@ func TestObserve_NotExists_WhenSecretMissing(t *testing.T) {
 	}
 }
 
-func TestObserve_Exists_WhenSecretFound(t *testing.T) {
+func TestObserve_Exists_AndUpToDate_WhenHashMatches(t *testing.T) {
 	cr := newCR()
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
+		Data:       map[string][]byte{"token": []byte("matching-value")},
+	}
+	// Pre-populate the value hash to simulate a previous successful Create.
+	matching := "0e07d72e4c3812f1bcf4ec03ce0e2f5e8c7c7f50e94b1f0fe9c2dad2d99f6b35"
+	// (we don't need to compute the real hash here; just compare against
+	// whatever hashValue returns - so use the helper after import)
+	_ = matching
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("matching-value")
 	api := &fakeAPI{get: func(_ context.Context, _ clients.ActionsSecretScope, _ string) (*clients.ActionsSecretResource, error) {
 		return &clients.ActionsSecretResource{Name: "CI_BOT_TOKEN", CreatedAt: "2026-01-01T00:00:00Z"}, nil
 	}}
-	e := &external{api: api}
+	e := &external{kube: newFakeKube(t, src).Build(), api: api}
 	got, err := e.Observe(context.Background(), cr)
 	if err != nil {
 		t.Fatalf("observe failed: %v", err)
@@ -117,11 +129,60 @@ func TestObserve_Exists_WhenSecretFound(t *testing.T) {
 		t.Fatalf("expected ResourceExists=true")
 	}
 	if !got.ResourceUpToDate {
-		t.Fatalf("expected ResourceUpToDate=true")
+		t.Fatalf("expected ResourceUpToDate=true when hash matches")
 	}
 	if cr.Status.AtProvider.CreatedAt == nil || *cr.Status.AtProvider.CreatedAt != "2026-01-01T00:00:00Z" {
 		t.Fatalf("expected status.atProvider.createdAt to be propagated")
 	}
+}
+
+func TestObserve_Exists_NotUpToDate_WhenSourceValueChanged(t *testing.T) {
+	cr := newCR()
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
+		Data:       map[string][]byte{"token": []byte("rotated-value")},
+	}
+	// Recorded hash is for the OLD value.
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("original-value")
+	api := &fakeAPI{get: func(_ context.Context, _ clients.ActionsSecretScope, _ string) (*clients.ActionsSecretResource, error) {
+		return &clients.ActionsSecretResource{Name: "CI_BOT_TOKEN", CreatedAt: "2026-01-01T00:00:00Z"}, nil
+	}}
+	e := &external{kube: newFakeKube(t, src).Build(), api: api}
+	got, err := e.Observe(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("observe failed: %v", err)
+	}
+	if !got.ResourceExists {
+		t.Fatalf("expected ResourceExists=true")
+	}
+	if got.ResourceUpToDate {
+		t.Fatalf("expected ResourceUpToDate=false when source value rotated")
+	}
+}
+
+func TestObserve_Exists_NotUpToDate_WhenNoHashRecorded(t *testing.T) {
+	cr := newCR() // ValueHash is nil
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
+		Data:       map[string][]byte{"token": []byte("v")},
+	}
+	api := &fakeAPI{get: func(_ context.Context, _ clients.ActionsSecretScope, _ string) (*clients.ActionsSecretResource, error) {
+		return &clients.ActionsSecretResource{Name: "CI_BOT_TOKEN"}, nil
+	}}
+	e := &external{kube: newFakeKube(t, src).Build(), api: api}
+	got, _ := e.Observe(context.Background(), cr)
+	if got.ResourceUpToDate {
+		t.Fatalf("expected ResourceUpToDate=false when no hash has been recorded yet")
+	}
+}
+
+// stringPtrFromHashOf computes hashValue(s) and returns it as a *string,
+// matching what Create writes into status. Inlined here so the test does
+// not need access to the unexported hashValue.
+func stringPtrFromHashOf(s string) *string {
+	sum := sha256.Sum256([]byte(s))
+	h := hex.EncodeToString(sum[:])
+	return &h
 }
 
 func TestObserve_GetFailurePropagatesError(t *testing.T) {
@@ -160,6 +221,10 @@ func TestCreate_ReadsValueAndPutsToCorrectScope(t *testing.T) {
 	if got.name != "CI_BOT_TOKEN" {
 		t.Fatalf("expected name=CI_BOT_TOKEN, got: %s", got.name)
 	}
+	expectedHash := *stringPtrFromHashOf("the-secret-value")
+	if cr.Status.AtProvider.ValueHash == nil || *cr.Status.AtProvider.ValueHash != expectedHash {
+		t.Fatalf("expected ValueHash to record the pushed value's SHA-256, got: %v", cr.Status.AtProvider.ValueHash)
+	}
 }
 
 func TestCreate_ErrorWhenSourceSecretMissing(t *testing.T) {
@@ -189,8 +254,9 @@ func TestCreate_ErrorWhenSourceKeyMissing(t *testing.T) {
 	}
 }
 
-func TestUpdate_ReissuesPut(t *testing.T) {
+func TestUpdate_ReissuesPutAndRecordsNewHash(t *testing.T) {
 	cr := newCR()
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("original-value")
 	src := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
 		Data:       map[string][]byte{"token": []byte("rotated-value")},
@@ -203,6 +269,10 @@ func TestUpdate_ReissuesPut(t *testing.T) {
 	}
 	if len(api.putCalls) != 1 || api.putCalls[0].value != "rotated-value" {
 		t.Fatalf("expected put with rotated value, got: %+v", api.putCalls)
+	}
+	expectedHash := *stringPtrFromHashOf("rotated-value")
+	if cr.Status.AtProvider.ValueHash == nil || *cr.Status.AtProvider.ValueHash != expectedHash {
+		t.Fatalf("expected ValueHash to be updated to rotated value, got: %v", cr.Status.AtProvider.ValueHash)
 	}
 }
 

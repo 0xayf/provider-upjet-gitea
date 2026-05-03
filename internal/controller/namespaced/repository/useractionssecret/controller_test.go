@@ -6,6 +6,8 @@ package useractionssecret
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
@@ -17,6 +19,14 @@ import (
 	v1alpha1 "github.com/0xayf/provider-upjet-gitea/apis/namespaced/repository/v1alpha1"
 	"github.com/0xayf/provider-upjet-gitea/internal/clients"
 )
+
+func stringPtrFromHashOf(s string) *string {
+	sum := sha256.Sum256([]byte(s))
+	h := hex.EncodeToString(sum[:])
+	return &h
+}
+
+func boolPtrTrue() *bool { b := true; return &b }
 
 type fakeAPI struct {
 	getResp    *clients.ActionsSecretResource
@@ -78,30 +88,60 @@ func newCR() *v1alpha1.UserActionsSecret {
 	}
 }
 
-func TestObserve_Exists(t *testing.T) {
+func TestObserve_NotExists_BeforeCreate(t *testing.T) {
+	// Existed marker not set -> Gitea has no list endpoint to check, so we
+	// must report doesn't-exist until the controller has successfully PUT.
 	cr := newCR()
-	api := &fakeAPI{getResp: &clients.ActionsSecretResource{Name: "MY_TOKEN", CreatedAt: "2026-01-01T00:00:00Z"}}
+	api := &fakeAPI{}
 	e := &external{api: api}
+	got, _ := e.Observe(context.Background(), cr)
+	if got.ResourceExists {
+		t.Fatalf("expected ResourceExists=false before Create has run")
+	}
+}
+
+func TestObserve_Exists_AndUpToDate_AfterCreate(t *testing.T) {
+	cr := newCR()
+	cr.Status.AtProvider.Existed = boolPtrTrue()
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("v")
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
+		Data:       map[string][]byte{"token": []byte("v")},
+	}
+	api := &fakeAPI{}
+	e := &external{kube: newKube(t, src).Build(), api: api}
 	got, err := e.Observe(context.Background(), cr)
 	if err != nil {
 		t.Fatalf("observe failed: %v", err)
 	}
 	if !got.ResourceExists || !got.ResourceUpToDate {
-		t.Fatalf("expected exists+uptodate, got: %+v", got)
+		t.Fatalf("expected exists+uptodate when hash matches, got: %+v", got)
 	}
 }
 
-func TestObserve_NotExists(t *testing.T) {
+func TestObserve_Exists_NotUpToDate_WhenSourceRotated(t *testing.T) {
 	cr := newCR()
-	api := &fakeAPI{getResp: nil}
-	e := &external{api: api}
-	got, _ := e.Observe(context.Background(), cr)
-	if got.ResourceExists {
-		t.Fatalf("expected ResourceExists=false")
+	cr.Status.AtProvider.Existed = boolPtrTrue()
+	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("original")
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
+		Data:       map[string][]byte{"token": []byte("rotated")},
+	}
+	api := &fakeAPI{}
+	e := &external{kube: newKube(t, src).Build(), api: api}
+	got, err := e.Observe(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("observe failed: %v", err)
+	}
+	if !got.ResourceExists {
+		t.Fatalf("expected ResourceExists=true")
+	}
+	if got.ResourceUpToDate {
+		t.Fatalf("expected ResourceUpToDate=false when source value changed")
 	}
 }
 
-func TestCreate_UsesUserScope(t *testing.T) {
+func TestCreate_UsesUserScope_AndSetsExistedAndHash(t *testing.T) {
 	cr := newCR()
 	src := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "test-ns"},
@@ -117,6 +157,13 @@ func TestCreate_UsesUserScope(t *testing.T) {
 	}
 	if !api.putCalls[0].scope.User {
 		t.Fatalf("expected scope.User=true, got: %+v", api.putCalls[0].scope)
+	}
+	if cr.Status.AtProvider.Existed == nil || !*cr.Status.AtProvider.Existed {
+		t.Fatalf("expected Existed=true after Create")
+	}
+	expectedHash := *stringPtrFromHashOf("v")
+	if cr.Status.AtProvider.ValueHash == nil || *cr.Status.AtProvider.ValueHash != expectedHash {
+		t.Fatalf("expected ValueHash to record value SHA, got: %v", cr.Status.AtProvider.ValueHash)
 	}
 }
 

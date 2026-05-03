@@ -6,6 +6,8 @@ package useractionssecret
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
@@ -102,15 +104,19 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	if name == "" {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
-	got, err := e.api.Get(ctx, scopeFor(cr), name)
-	if err != nil {
-		return managed.ExternalObservation{}, errors.Wrap(err, errGet)
-	}
-	if got == nil {
+	// Gitea exposes no list/get for /user/actions/secrets, so we cannot
+	// query existence directly. Instead, trust the local marker we set
+	// after a successful Create.
+	if cr.Status.AtProvider.Existed == nil || !*cr.Status.AtProvider.Existed {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
-	cr.Status.AtProvider = v1alpha1.UserActionsSecretObservation{CreatedAt: stringPtr(got.CreatedAt)}
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	value, err := readLocalValueSecret(ctx, e.kube, cr.Namespace, cr.Spec.ForProvider.SecretValueSecretRef.Name, cr.Spec.ForProvider.SecretValueSecretRef.Key)
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	currentHash := hashValue(value)
+	upToDate := cr.Status.AtProvider.ValueHash != nil && *cr.Status.AtProvider.ValueHash == currentHash
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.ExternalCreation, error) {
@@ -125,6 +131,8 @@ func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.E
 	if err := e.api.Put(ctx, scopeFor(cr), secretName(cr), value); err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errPut)
 	}
+	cr.Status.AtProvider.Existed = boolPtr(true)
+	cr.Status.AtProvider.ValueHash = stringPtr(hashValue(value))
 	return managed.ExternalCreation{}, nil
 }
 
@@ -140,8 +148,18 @@ func (e *external) Update(ctx context.Context, mg xpresource.Managed) (managed.E
 	if err := e.api.Put(ctx, scopeFor(cr), secretName(cr), value); err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errPut)
 	}
+	cr.Status.AtProvider.ValueHash = stringPtr(hashValue(value))
 	return managed.ExternalUpdate{}, nil
 }
+
+// hashValue returns the hex SHA-256 of v.
+func hashValue(v string) string {
+	sum := sha256.Sum256([]byte(v))
+	return hex.EncodeToString(sum[:])
+}
+
+// boolPtr is a tiny helper for taking the address of a literal bool.
+func boolPtr(b bool) *bool { return &b }
 
 func (e *external) Delete(ctx context.Context, mg xpresource.Managed) (managed.ExternalDelete, error) {
 	cr, ok := mg.(*v1alpha1.UserActionsSecret)
