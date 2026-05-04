@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
@@ -126,6 +127,9 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	previousHash := cr.Status.AtProvider.ValueHash
 	cr.Status.AtProvider.Existed = boolPtr(true)
 	cr.Status.AtProvider.ValueHash = previousHash
+	// The Crossplane managed reconciler does not auto-transition Ready
+	// from Creating to Available; the external client must mark it.
+	cr.SetConditions(xpv1.Available())
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
