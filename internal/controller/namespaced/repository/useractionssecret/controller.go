@@ -105,9 +105,11 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	// Gitea exposes no list/get for /user/actions/secrets, so we cannot
-	// query existence directly. Instead, trust the local marker we set
-	// after a successful Create.
-	if cr.Status.AtProvider.Existed == nil || !*cr.Status.AtProvider.Existed {
+	// query existence directly. Use the reconciler-managed
+	// crossplane.io/external-create-succeeded annotation as the marker.
+	// It is set on the resource by Crossplane after a successful Create
+	// and persists independently of any status mutations.
+	if _, succeeded := cr.GetAnnotations()[annotationCreateSucceeded]; !succeeded {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	value, err := readLocalValueSecret(ctx, e.kube, cr.Namespace, cr.Spec.ForProvider.SecretValueSecretRef.Name, cr.Spec.ForProvider.SecretValueSecretRef.Key)
@@ -116,8 +118,21 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	}
 	currentHash := hashValue(value)
 	upToDate := cr.Status.AtProvider.ValueHash != nil && *cr.Status.AtProvider.ValueHash == currentHash
+
+	// Persist atProvider via Observe (mutations from Observe are reliably
+	// written; mutations from Create can be dropped by status update
+	// races). Existed mirrors the annotation for human-readable status;
+	// ValueHash is preserved across reconciles so Update can replace it
+	// when the source rotates.
+	previousHash := cr.Status.AtProvider.ValueHash
+	cr.Status.AtProvider.Existed = boolPtr(true)
+	cr.Status.AtProvider.ValueHash = previousHash
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
+
+// annotationCreateSucceeded is the annotation Crossplane's managed
+// reconciler sets on a resource after a successful Create call.
+const annotationCreateSucceeded = "crossplane.io/external-create-succeeded"
 
 func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.ExternalCreation, error) {
 	cr, ok := mg.(*v1alpha1.UserActionsSecret)

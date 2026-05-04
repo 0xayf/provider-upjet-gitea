@@ -231,9 +231,10 @@ spec:
 
 The user is determined by the credentials of the referenced ProviderConfig.
 Gitea's `/user/actions/secrets` endpoint operates on the authenticated user
-and exposes neither GET nor LIST, so the controller tracks creation locally
-via `status.atProvider.existed` after a successful Create. Value rotation is
-detected via the same SHA-256 hash mechanism as OrgActionsSecret.
+and exposes neither GET nor LIST, so the controller treats Crossplane's
+own `crossplane.io/external-create-succeeded` annotation as the existence
+marker. Value rotation is detected via the same SHA-256 hash mechanism as
+OrgActionsSecret.
 
 ### Team Resources (`team.gitea.crossplane.io`)
 

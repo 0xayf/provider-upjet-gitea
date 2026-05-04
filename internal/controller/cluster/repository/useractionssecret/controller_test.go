@@ -111,6 +111,13 @@ func TestCreate_UsesUserScope_AndSetsExistedAndHash(t *testing.T) {
 	}
 }
 
+func markCreated(cr *v1alpha1.UserActionsSecret) {
+	if cr.Annotations == nil {
+		cr.Annotations = map[string]string{}
+	}
+	cr.Annotations["crossplane.io/external-create-succeeded"] = "1"
+}
+
 func TestObserve_NotExists_BeforeCreate(t *testing.T) {
 	cr := newCR()
 	api := &fakeAPI{}
@@ -123,7 +130,7 @@ func TestObserve_NotExists_BeforeCreate(t *testing.T) {
 
 func TestObserve_Exists_AndUpToDate_AfterCreate(t *testing.T) {
 	cr := newCR()
-	cr.Status.AtProvider.Existed = boolPtrTrue()
+	markCreated(cr)
 	cr.Status.AtProvider.ValueHash = stringPtrFromHashOf("v")
 	src := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "source-secret", Namespace: "src-ns"},
@@ -137,6 +144,9 @@ func TestObserve_Exists_AndUpToDate_AfterCreate(t *testing.T) {
 	}
 	if !got.ResourceExists || !got.ResourceUpToDate {
 		t.Fatalf("expected exists+uptodate, got: %+v", got)
+	}
+	if cr.Status.AtProvider.Existed == nil || !*cr.Status.AtProvider.Existed {
+		t.Fatalf("expected Observe to set Existed=true")
 	}
 }
 
