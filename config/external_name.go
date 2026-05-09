@@ -10,10 +10,13 @@ var ExternalNameConfigs = map[string]config.ExternalName{
 	// Organizations
 	"gitea_org": config.IdentifierFromProvider,
 
-	// Teams and membership
-	"gitea_team":            config.IdentifierFromProvider,
-	"gitea_team_membership": config.IdentifierFromProvider,
-	"gitea_team_members":    config.IdentifierFromProvider,
+	// Teams and membership are managed by hand-written controllers in
+	// internal/controller/{cluster,namespaced}/gitea/team and
+	// internal/controller/{cluster,namespaced}/team/membership. They are
+	// intentionally absent from this map so upjet does not regenerate
+	// Terraform-backed shells for them. The hand-written controllers
+	// drive Gitea's per-unit permission model directly via the API.
+	"gitea_team_members": config.IdentifierFromProvider,
 
 	// Users
 	"gitea_user": config.IdentifierFromProvider,

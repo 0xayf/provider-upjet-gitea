@@ -34,8 +34,11 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Membership is the Schema for the Memberships API. gitea_team_membership
-          manages a single user's membership of a single team.
+        description: |-
+          Membership manages a Gitea user's membership in a team. The team is
+          referenced by org + name; the controller resolves to Gitea's numeric ID
+          at reconcile time, so claims don't need to depend on Crossplane sibling
+          XRs to find the ID.
         properties:
           apiVersion:
             description: |-
@@ -55,7 +58,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: MembershipSpec defines the desired state of Membership
+            description: MembershipSpec defines the desired state of Membership.
             properties:
               deletionPolicy:
                 default: Delete
@@ -72,40 +75,27 @@ spec:
                 - Delete
                 type: string
               forProvider:
+                description: MembershipParameters define the desired membership of
+                  a Gitea team.
                 properties:
-                  teamId:
+                  team:
                     description: |-
-                      (Number) The ID of the team.
-                      The ID of the team.
-                    type: number
+                      Team identifies the Gitea team by org + name. The controller
+                      resolves this to the numeric ID at reconcile time, so callers
+                      don't need to know Gitea's auto-assigned IDs.
+                    properties:
+                      name:
+                        description: Name is the team's name within the organisation.
+                        type: string
+                      org:
+                        description: Org is the Gitea organisation that owns the team.
+                        type: string
+                    required:
+                    - name
+                    - org
+                    type: object
                   username:
-                    description: |-
-                      (String) The username of the team member.
-                      The username of the team member.
-                    type: string
-                type: object
-              initProvider:
-                description: |-
-                  THIS IS A BETA FIELD. It will be honored
-                  unless the Management Policies feature flag is disabled.
-                  InitProvider holds the same fields as ForProvider, with the exception
-                  of Identifier and other resource reference fields. The fields that are
-                  in InitProvider are merged into ForProvider when the resource is created.
-                  The same fields are also added to the terraform ignore_changes hook, to
-                  avoid updating them after creation. This is useful for fields that are
-                  required on creation, but we do not desire to update them after creation,
-                  for example because of an external controller is managing them, like an
-                  autoscaler.
-                properties:
-                  teamId:
-                    description: |-
-                      (Number) The ID of the team.
-                      The ID of the team.
-                    type: number
-                  username:
-                    description: |-
-                      (String) The username of the team member.
-                      The username of the team member.
+                    description: Username is the Gitea user to add to the team.
                     type: string
                 type: object
               managementPolicies:
@@ -195,32 +185,25 @@ spec:
             - forProvider
             type: object
             x-kubernetes-validations:
-            - message: spec.forProvider.teamId is a required parameter
+            - message: spec.forProvider.team is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.teamId)
-                || (has(self.initProvider) && has(self.initProvider.teamId))'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.team)'
             - message: spec.forProvider.username is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.username)
-                || (has(self.initProvider) && has(self.initProvider.username))'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.username)'
           status:
             description: MembershipStatus defines the observed state of Membership.
             properties:
               atProvider:
+                description: MembershipObservation reflects observed Gitea state.
                 properties:
-                  id:
-                    description: (String) The ID of this resource.
-                    type: string
                   teamId:
                     description: |-
-                      (Number) The ID of the team.
-                      The ID of the team.
-                    type: number
-                  username:
-                    description: |-
-                      (String) The username of the team member.
-                      The username of the team member.
-                    type: string
+                      TeamID is the numeric team ID resolved from spec.forProvider.team
+                      at the last successful reconcile. Surfaced to make it easy to
+                      cross-reference Gitea's UI.
+                    format: int64
+                    type: integer
                 type: object
               conditions:
                 description: Conditions of the resource.

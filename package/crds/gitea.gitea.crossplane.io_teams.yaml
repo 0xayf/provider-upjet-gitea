@@ -34,8 +34,12 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Team is the Schema for the Teams API. gitea_team manages Team
-          that are part of an organisation.
+        description: |-
+          Team manages a Gitea organisation team with explicit per-unit permissions
+          (units_map). Replaces the upjet-generated Team resource so the controller
+          can drive Gitea's per-unit permission model directly, including
+          repo.packages / repo.actions which the upstream Terraform provider's
+          `units` enum does not honour.
         properties:
           apiVersion:
             description: |-
@@ -55,7 +59,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TeamSpec defines the desired state of Team
+            description: TeamSpec defines the desired state of Team.
             properties:
               deletionPolicy:
                 default: Delete
@@ -72,113 +76,55 @@ spec:
                 - Delete
                 type: string
               forProvider:
-                properties:
-                  canCreateRepos:
-                    description: |-
-                      (Boolean) Flag if the Teams members should be able to create Rpositories in the Organisation
-                      Flag if the Teams members should be able to create Rpositories in the Organisation
-                    type: boolean
-                  description:
-                    description: |-
-                      (String) Description of the Team
-                      Description of the Team
-                    type: string
-                  includeAllRepositories:
-                    description: |-
-                      (Boolean) Flag if the Teams members should have access to all Repositories in the Organisation
-                      Flag if the Teams members should have access to all Repositories in the Organisation
-                    type: boolean
-                  name:
-                    description: |-
-                      (String) Name of the Team
-                      Name of the Team
-                    type: string
-                  organisation:
-                    description: |-
-                      (String) The organisation which this Team is part of.
-                      The organisation which this Team is part of.
-                    type: string
-                  permission:
-                    description: |-
-                      (String) Permissions associated with this Team
-                      Can be none, read, write, admin or owner
-                      Permissions associated with this Team
-                      Can be `none`, `read`, `write`, `admin` or `owner`
-                    type: string
-                  repositories:
-                    description: |-
-                      (List of String) List of Repositories that should be part of this team
-                      List of Repositories that should be part of this team
-                    items:
-                      type: string
-                    type: array
-                  units:
-                    description: |-
-                      (String) List of types of Repositories that should be allowed to be created from Team members.
-                      Can be repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects and/or repo.ext_wiki
-                      List of types of Repositories that should be allowed to be created from Team members.
-                      Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects` and/or `repo.ext_wiki`
-                    type: string
-                type: object
-              initProvider:
                 description: |-
-                  THIS IS A BETA FIELD. It will be honored
-                  unless the Management Policies feature flag is disabled.
-                  InitProvider holds the same fields as ForProvider, with the exception
-                  of Identifier and other resource reference fields. The fields that are
-                  in InitProvider are merged into ForProvider when the resource is created.
-                  The same fields are also added to the terraform ignore_changes hook, to
-                  avoid updating them after creation. This is useful for fields that are
-                  required on creation, but we do not desire to update them after creation,
-                  for example because of an external controller is managing them, like an
-                  autoscaler.
+                  TeamParameters is the desired state of a Gitea team. unitsMap is required —
+                  the legacy `permission` + `units` shape is intentionally not exposed here.
                 properties:
-                  canCreateRepos:
-                    description: |-
-                      (Boolean) Flag if the Teams members should be able to create Rpositories in the Organisation
-                      Flag if the Teams members should be able to create Rpositories in the Organisation
+                  canCreateOrgRepo:
+                    description: CanCreateOrgRepo lets team members create new repos
+                      under the org.
                     type: boolean
                   description:
-                    description: |-
-                      (String) Description of the Team
-                      Description of the Team
+                    description: Description is a free-form team description shown
+                      in the Gitea UI.
                     type: string
                   includeAllRepositories:
                     description: |-
-                      (Boolean) Flag if the Teams members should have access to all Repositories in the Organisation
-                      Flag if the Teams members should have access to all Repositories in the Organisation
+                      IncludeAllRepositories grants the team access to every current and
+                      future repository in the organisation. Mutually exclusive with
+                      Repositories — when true, Repositories is ignored.
                     type: boolean
                   name:
                     description: |-
-                      (String) Name of the Team
-                      Name of the Team
+                      Name is the team's name within the organisation. Immutable on the
+                      Gitea side after creation; renaming requires delete + recreate.
                     type: string
                   organisation:
-                    description: |-
-                      (String) The organisation which this Team is part of.
-                      The organisation which this Team is part of.
-                    type: string
-                  permission:
-                    description: |-
-                      (String) Permissions associated with this Team
-                      Can be none, read, write, admin or owner
-                      Permissions associated with this Team
-                      Can be `none`, `read`, `write`, `admin` or `owner`
+                    description: Organisation is the org that owns the team.
                     type: string
                   repositories:
                     description: |-
-                      (List of String) List of Repositories that should be part of this team
-                      List of Repositories that should be part of this team
+                      Repositories is the explicit list of repos the team's permissions
+                      apply to. Empty when IncludeAllRepositories is true.
                     items:
                       type: string
                     type: array
-                  units:
+                  unitsMap:
+                    additionalProperties:
+                      type: string
                     description: |-
-                      (String) List of types of Repositories that should be allowed to be created from Team members.
-                      Can be repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects and/or repo.ext_wiki
-                      List of types of Repositories that should be allowed to be created from Team members.
-                      Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects` and/or `repo.ext_wiki`
-                    type: string
+                      UnitsMap is the per-unit permission map. Keys must be valid Gitea
+                      team unit names; values must be one of `none`, `read`, `write`,
+                      `admin`. A unit absent from the map is `none` for that team.
+
+                      The full set of recognised keys is:
+                        repo.code, repo.issues, repo.ext_issues,
+                        repo.wiki, repo.ext_wiki,
+                        repo.pulls, repo.releases, repo.projects,
+                        repo.packages, repo.actions
+                    type: object
+                required:
+                - unitsMap
                 type: object
               managementPolicies:
                 default:
@@ -269,66 +215,42 @@ spec:
             x-kubernetes-validations:
             - message: spec.forProvider.name is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.name)
-                || (has(self.initProvider) && has(self.initProvider.name))'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.name)'
             - message: spec.forProvider.organisation is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.organisation)
-                || (has(self.initProvider) && has(self.initProvider.organisation))'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.organisation)'
+            - message: spec.forProvider.unitsMap must have at least one entry
+              rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
+                || ''Update'' in self.managementPolicies) || (has(self.forProvider.unitsMap)
+                && size(self.forProvider.unitsMap) > 0)'
           status:
             description: TeamStatus defines the observed state of Team.
             properties:
               atProvider:
+                description: TeamObservation reflects observed Gitea state.
                 properties:
-                  canCreateRepos:
-                    description: |-
-                      (Boolean) Flag if the Teams members should be able to create Rpositories in the Organisation
-                      Flag if the Teams members should be able to create Rpositories in the Organisation
-                    type: boolean
-                  description:
-                    description: |-
-                      (String) Description of the Team
-                      Description of the Team
-                    type: string
                   id:
-                    description: (String) The ID of this resource.
-                    type: string
-                  includeAllRepositories:
-                    description: |-
-                      (Boolean) Flag if the Teams members should have access to all Repositories in the Organisation
-                      Flag if the Teams members should have access to all Repositories in the Organisation
-                    type: boolean
-                  name:
-                    description: |-
-                      (String) Name of the Team
-                      Name of the Team
-                    type: string
-                  organisation:
-                    description: |-
-                      (String) The organisation which this Team is part of.
-                      The organisation which this Team is part of.
-                    type: string
+                    description: ID is Gitea's numeric team identifier (the canonical
+                      primary key).
+                    format: int64
+                    type: integer
                   permission:
                     description: |-
-                      (String) Permissions associated with this Team
-                      Can be none, read, write, admin or owner
-                      Permissions associated with this Team
-                      Can be `none`, `read`, `write`, `admin` or `owner`
+                      Permission is Gitea's legacy single-permission view, derived from
+                      units_map. We surface it as observation only — set permissions via
+                      spec.forProvider.unitsMap.
                     type: string
-                  repositories:
-                    description: |-
-                      (List of String) List of Repositories that should be part of this team
-                      List of Repositories that should be part of this team
+                  units:
+                    description: Units is the list of unit names the team has any
+                      access to.
                     items:
                       type: string
                     type: array
-                  units:
-                    description: |-
-                      (String) List of types of Repositories that should be allowed to be created from Team members.
-                      Can be repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects and/or repo.ext_wiki
-                      List of types of Repositories that should be allowed to be created from Team members.
-                      Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects` and/or `repo.ext_wiki`
-                    type: string
+                  unitsMap:
+                    additionalProperties:
+                      type: string
+                    description: UnitsMap is the per-unit permission level Gitea reports.
+                    type: object
                 type: object
               conditions:
                 description: Conditions of the resource.
