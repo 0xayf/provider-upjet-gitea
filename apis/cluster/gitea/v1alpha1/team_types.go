@@ -13,18 +13,20 @@ import (
 
 // TeamObservation reflects observed Gitea state.
 type TeamObservation struct {
-	// ID is Gitea's numeric team identifier (the canonical primary key).
-	ID *int64 `json:"id,omitempty"`
+	// ID is Gitea's team identifier (numeric in Gitea's API but stored as
+	// a decimal string here to match Terraform-state convention — every
+	// upjet-generated MR in this provider stores numeric IDs as strings,
+	// and existing Team MRs in clusters that ran the upjet shape still
+	// hold the string form). The hand-written controller parses on read
+	// and formats on write.
+	ID *string `json:"id,omitempty"`
 
-	// Permission is Gitea's legacy single-permission view, derived from
-	// units_map. We surface it as observation only — set permissions via
-	// spec.forProvider.unitsMap.
-	Permission *string `json:"permission,omitempty"`
-
-	// Units is the list of unit names the team has any access to.
-	Units []string `json:"units,omitempty"`
-
-	// UnitsMap is the per-unit permission level Gitea reports.
+	// UnitsMap is the per-unit permission level Gitea reports. This is
+	// the canonical representation; we deliberately don't surface
+	// Gitea's derived `permission` (always reported as `none` when the
+	// team uses per-unit permissions) or its `units` list (which the
+	// upstream Terraform provider serialised as a single string and
+	// can't be cleanly mapped to []string in our hand-written shape).
 	UnitsMap map[string]string `json:"unitsMap,omitempty"`
 }
 

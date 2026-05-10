@@ -241,8 +241,8 @@ func TestCreateExpandsUnitsMapToFullSet(t *testing.T) {
 	if got["repo.issues"] != clients.TeamPermNone {
 		t.Fatalf("absent unit not defaulted to none: %v", got)
 	}
-	if cr.Status.AtProvider.ID == nil || *cr.Status.AtProvider.ID != 99 {
-		t.Fatalf("status.atProvider.id not set from create response")
+	if cr.Status.AtProvider.ID == nil || *cr.Status.AtProvider.ID != "99" {
+		t.Fatalf("status.atProvider.id not set from create response: %v", cr.Status.AtProvider.ID)
 	}
 }
 
@@ -274,7 +274,7 @@ func TestCreateSkipsRepoAttachWhenIncludeAllRepositories(t *testing.T) {
 }
 
 func TestUpdateReconcilesRepoSet(t *testing.T) {
-	id := int64(5)
+	id := "5"
 	api := &fakeTeamAPI{
 		listReposResp: []string{"keep", "stale"}, // current
 	}
@@ -309,7 +309,7 @@ func TestUpdateRecoversIDIfStatusEmpty(t *testing.T) {
 }
 
 func TestDeleteUsesStatusID(t *testing.T) {
-	id := int64(8)
+	id := "8"
 	api := &fakeTeamAPI{}
 	e := &external{api: api}
 	cr := newTeam(map[string]string{"repo.code": "write"}, nil)

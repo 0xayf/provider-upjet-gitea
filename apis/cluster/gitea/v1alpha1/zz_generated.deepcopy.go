@@ -1271,18 +1271,8 @@ func (in *TeamObservation) DeepCopyInto(out *TeamObservation) {
 	*out = *in
 	if in.ID != nil {
 		in, out := &in.ID, &out.ID
-		*out = new(int64)
-		**out = **in
-	}
-	if in.Permission != nil {
-		in, out := &in.Permission, &out.Permission
 		*out = new(string)
 		**out = **in
-	}
-	if in.Units != nil {
-		in, out := &in.Units, &out.Units
-		*out = make([]string, len(*in))
-		copy(*out, *in)
 	}
 	if in.UnitsMap != nil {
 		in, out := &in.UnitsMap, &out.UnitsMap

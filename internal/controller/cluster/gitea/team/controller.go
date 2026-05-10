@@ -109,14 +109,11 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	}
 
 	// Mirror canonical state into atProvider so consumers can read teamId
-	// (used by older membership claims) and the resolved unitsMap.
-	id := got.ID
-	cr.Status.AtProvider.ID = &id
-	if got.Permission != "" {
-		p := got.Permission
-		cr.Status.AtProvider.Permission = &p
-	}
-	cr.Status.AtProvider.Units = append([]string(nil), got.Units...)
+	// (used by older membership claims) and the resolved unitsMap. ID is
+	// surfaced as a decimal string for cross-version compatibility with the
+	// upjet-shape data already present in clusters.
+	idStr := strconv.FormatInt(got.ID, 10)
+	cr.Status.AtProvider.ID = &idStr
 	if got.UnitsMap != nil {
 		um := make(map[string]string, len(got.UnitsMap))
 		for k, v := range got.UnitsMap {
@@ -155,9 +152,9 @@ func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.E
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreate)
 	}
-	id := created.ID
-	cr.Status.AtProvider.ID = &id
-	meta.SetExternalName(cr, strconv.FormatInt(created.ID, 10))
+	idStr := strconv.FormatInt(created.ID, 10)
+	cr.Status.AtProvider.ID = &idStr
+	meta.SetExternalName(cr, idStr)
 
 	// Attach repositories if not includes_all_repositories.
 	if !boolValue(cr.Spec.ForProvider.IncludeAllRepositories) {
@@ -187,10 +184,13 @@ func (e *external) Update(ctx context.Context, mg xpresource.Managed) (managed.E
 		if got == nil {
 			return managed.ExternalUpdate{}, errors.New("team not found during update")
 		}
-		id := got.ID
-		cr.Status.AtProvider.ID = &id
+		idStr := strconv.FormatInt(got.ID, 10)
+		cr.Status.AtProvider.ID = &idStr
 	}
-	id := *cr.Status.AtProvider.ID
+	id, err := strconv.ParseInt(*cr.Status.AtProvider.ID, 10, 64)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "status.atProvider.id is not a valid integer")
+	}
 
 	params := paramsFromSpec(&cr.Spec.ForProvider)
 	updated, err := e.api.Update(ctx, id, params)
@@ -247,10 +247,14 @@ func (e *external) Delete(ctx context.Context, mg xpresource.Managed) (managed.E
 		if got == nil {
 			return managed.ExternalDelete{}, nil
 		}
-		id := got.ID
-		cr.Status.AtProvider.ID = &id
+		idStr := strconv.FormatInt(got.ID, 10)
+		cr.Status.AtProvider.ID = &idStr
 	}
-	if err := e.api.Delete(ctx, *cr.Status.AtProvider.ID); err != nil {
+	id, err := strconv.ParseInt(*cr.Status.AtProvider.ID, 10, 64)
+	if err != nil {
+		return managed.ExternalDelete{}, errors.Wrap(err, "status.atProvider.id is not a valid integer")
+	}
+	if err := e.api.Delete(ctx, id); err != nil {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDelete)
 	}
 	return managed.ExternalDelete{}, nil
