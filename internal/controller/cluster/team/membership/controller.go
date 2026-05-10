@@ -89,25 +89,35 @@ type external struct {
 
 func (e *external) Disconnect(ctx context.Context) error { return nil }
 
-// resolveTeamID does the org+name → numeric ID lookup. Cached on
+// resolveTeamID returns the numeric Gitea team ID for this Membership,
+// preferring the modern spec.team {org, name} ref but falling back to the
+// legacy spec.teamId for back-compat with v0.2.x MRs. Cached on
 // status.atProvider.teamId after the first successful resolve.
 func (e *external) resolveTeamID(ctx context.Context, cr *v1alpha1.Membership) (int64, error) {
 	if cr.Status.AtProvider.TeamID != nil && *cr.Status.AtProvider.TeamID > 0 {
 		return *cr.Status.AtProvider.TeamID, nil
 	}
-	if cr.Spec.ForProvider.Team == nil || cr.Spec.ForProvider.Team.Org == "" || cr.Spec.ForProvider.Team.Name == "" {
-		return 0, errors.New(errMissingTeam)
+	// Modern path: org + name -> numeric ID via Gitea API.
+	if cr.Spec.ForProvider.Team != nil && cr.Spec.ForProvider.Team.Org != "" && cr.Spec.ForProvider.Team.Name != "" {
+		got, err := e.api.Get(ctx, cr.Spec.ForProvider.Team.Org, cr.Spec.ForProvider.Team.Name)
+		if err != nil {
+			return 0, errors.Wrap(err, errResolveTeam)
+		}
+		if got == nil {
+			return 0, fmt.Errorf("%w: %s/%s", ErrTeamNotFound, cr.Spec.ForProvider.Team.Org, cr.Spec.ForProvider.Team.Name)
+		}
+		id := got.ID
+		cr.Status.AtProvider.TeamID = &id
+		return id, nil
 	}
-	got, err := e.api.Get(ctx, cr.Spec.ForProvider.Team.Org, cr.Spec.ForProvider.Team.Name)
-	if err != nil {
-		return 0, errors.Wrap(err, errResolveTeam)
+	// Legacy path: numeric teamId from upjet shape. No name to look up;
+	// the ID is the source of truth.
+	if cr.Spec.ForProvider.TeamID != nil && *cr.Spec.ForProvider.TeamID > 0 {
+		id := int64(*cr.Spec.ForProvider.TeamID)
+		cr.Status.AtProvider.TeamID = &id
+		return id, nil
 	}
-	if got == nil {
-		return 0, fmt.Errorf("%w: %s/%s", ErrTeamNotFound, cr.Spec.ForProvider.Team.Org, cr.Spec.ForProvider.Team.Name)
-	}
-	id := got.ID
-	cr.Status.AtProvider.TeamID = &id
-	return id, nil
+	return 0, errors.New(errMissingTeam)
 }
 
 func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.ExternalObservation, error) {

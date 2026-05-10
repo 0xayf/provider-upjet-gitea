@@ -1326,6 +1326,16 @@ func (in *TeamParameters) DeepCopyInto(out *TeamParameters) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Permission != nil {
+		in, out := &in.Permission, &out.Permission
+		*out = new(string)
+		**out = **in
+	}
+	if in.Units != nil {
+		in, out := &in.Units, &out.Units
+		*out = new(string)
+		**out = **in
+	}
 	if in.UnitsMap != nil {
 		in, out := &in.UnitsMap, &out.UnitsMap
 		*out = make(map[string]string, len(*in))

@@ -63,8 +63,10 @@ spec:
             properties:
               forProvider:
                 description: |-
-                  TeamParameters is the desired state of a Gitea team. unitsMap is required —
-                  the legacy `permission` + `units` shape is intentionally not exposed here.
+                  TeamParameters is the desired state of a Gitea team. Two ways to express
+                  permissions: the new per-unit `unitsMap`, or the legacy `permission` (+
+                  optional `units`) pair carried over from the upjet shape for back-compat.
+                  When both are set, `unitsMap` wins.
                 properties:
                   canCreateOrgRepo:
                     description: CanCreateOrgRepo lets team members create new repos
@@ -88,6 +90,20 @@ spec:
                   organisation:
                     description: Organisation is the org that owns the team.
                     type: string
+                  permission:
+                    description: |-
+                      Permission is the legacy single-permission level applied uniformly
+                      across the team's units. One of `none`, `read`, `write`, `admin`.
+                      Carried over from the upjet shape for back-compat — set this *or*
+                      `unitsMap`, not both. When both are set, `unitsMap` wins. Existing
+                      MRs created by upstream provider v0.2.x continue to work as-is via
+                      this path.
+                    enum:
+                    - none
+                    - read
+                    - write
+                    - admin
+                    type: string
                   repositories:
                     description: |-
                       Repositories is the explicit list of repos the team's permissions
@@ -95,6 +111,14 @@ spec:
                     items:
                       type: string
                     type: array
+                  units:
+                    description: |-
+                      Units is the legacy string-encoded list of unit names (e.g.
+                      `[repo.code, repo.pulls]`) the team's `Permission` applies to. The
+                      upstream Terraform provider serialised it as a single string, and
+                      existing on-cluster MRs still hold that shape, so we accept it as
+                      `*string` and parse on read. Empty/absent means "all units".
+                    type: string
                   unitsMap:
                     additionalProperties:
                       type: string
@@ -109,8 +133,6 @@ spec:
                         repo.pulls, repo.releases, repo.projects,
                         repo.packages, repo.actions
                     type: object
-                required:
-                - unitsMap
                 type: object
               managementPolicies:
                 default:
@@ -177,10 +199,11 @@ spec:
             - message: spec.forProvider.organisation is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
                 || ''Update'' in self.managementPolicies) || has(self.forProvider.organisation)'
-            - message: spec.forProvider.unitsMap must have at least one entry
+            - message: one of spec.forProvider.unitsMap (non-empty) or spec.forProvider.permission
+                must be set
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
                 || ''Update'' in self.managementPolicies) || (has(self.forProvider.unitsMap)
-                && size(self.forProvider.unitsMap) > 0)'
+                && size(self.forProvider.unitsMap) > 0) || has(self.forProvider.permission)'
           status:
             description: TeamStatus defines the observed state of Team.
             properties:

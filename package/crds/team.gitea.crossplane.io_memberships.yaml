@@ -75,8 +75,13 @@ spec:
                 - Delete
                 type: string
               forProvider:
-                description: MembershipParameters define the desired membership of
-                  a Gitea team.
+                description: |-
+                  MembershipParameters define the desired membership of a Gitea team.
+
+                  Two ways to point at the team: the new `team` ref by org and name, or the
+                  legacy `teamId` numeric ID carried over from the upjet shape for
+                  back-compat. When both are set, `team` wins. Existing MRs created by
+                  upstream provider v0.2.x continue to work as-is via `teamId`.
                 properties:
                   team:
                     description: |-
@@ -94,6 +99,13 @@ spec:
                     - name
                     - org
                     type: object
+                  teamId:
+                    description: |-
+                      TeamID is the legacy numeric team ID. Set this *or* `team`, not
+                      both. When both are set, `team` wins. Stored as float64 to match
+                      the shape on-cluster MRs already hold (the upstream Terraform
+                      provider treats numeric IDs as floats).
+                    type: number
                   username:
                     description: Username is the Gitea user to add to the team.
                     type: string
@@ -185,9 +197,11 @@ spec:
             - forProvider
             type: object
             x-kubernetes-validations:
-            - message: spec.forProvider.team is a required parameter
+            - message: one of spec.forProvider.team or spec.forProvider.teamId must
+                be set
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.team)'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.team)
+                || has(self.forProvider.teamId)'
             - message: spec.forProvider.username is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
                 || ''Update'' in self.managementPolicies) || has(self.forProvider.username)'

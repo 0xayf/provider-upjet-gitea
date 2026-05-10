@@ -384,6 +384,99 @@ func TestParamsFromSpecExpansion(t *testing.T) {
 	}
 }
 
+func TestParamsFromSpecLegacyPermissionAndUnits(t *testing.T) {
+	units := "[repo.code, repo.pulls]"
+	p := &v1alpha1.TeamParameters{
+		Name:         ptrStr("x"),
+		Organisation: ptrStr("apps"),
+		Permission:   ptrStr("write"),
+		Units:        &units,
+	}
+	out := paramsFromSpec(p).UnitsMap
+	if out["repo.code"] != clients.TeamPermWrite {
+		t.Fatalf("expected repo.code=write, got %q", out["repo.code"])
+	}
+	if out["repo.pulls"] != clients.TeamPermWrite {
+		t.Fatalf("expected repo.pulls=write, got %q", out["repo.pulls"])
+	}
+	if out["repo.issues"] != clients.TeamPermNone {
+		t.Fatalf("expected repo.issues=none (not in legacy units list), got %q", out["repo.issues"])
+	}
+}
+
+func TestParamsFromSpecLegacyPermissionAllUnits(t *testing.T) {
+	// permission set, units empty → apply uniformly to all 10 units
+	p := &v1alpha1.TeamParameters{
+		Name:         ptrStr("x"),
+		Organisation: ptrStr("apps"),
+		Permission:   ptrStr("read"),
+	}
+	out := paramsFromSpec(p).UnitsMap
+	for unit := range clients.ValidTeamUnits {
+		if out[unit] != clients.TeamPermRead {
+			t.Fatalf("expected %s=read uniformly, got %q", unit, out[unit])
+		}
+	}
+}
+
+func TestParamsFromSpecUnitsMapWinsOverLegacy(t *testing.T) {
+	p := &v1alpha1.TeamParameters{
+		Name:         ptrStr("x"),
+		Organisation: ptrStr("apps"),
+		Permission:   ptrStr("read"),
+		UnitsMap:     map[string]string{"repo.packages": "admin"},
+	}
+	out := paramsFromSpec(p).UnitsMap
+	if out["repo.packages"] != clients.TeamPermAdmin {
+		t.Fatalf("unitsMap should win: expected admin, got %q", out["repo.packages"])
+	}
+	if out["repo.code"] != clients.TeamPermNone {
+		t.Fatalf("with unitsMap winning, unspecified units should be none; got repo.code=%q", out["repo.code"])
+	}
+}
+
+func TestValidateSpecAcceptsLegacyShape(t *testing.T) {
+	p := &v1alpha1.TeamParameters{
+		Name:         ptrStr("x"),
+		Organisation: ptrStr("apps"),
+		Permission:   ptrStr("write"),
+	}
+	if err := validateSpec(p); err != nil {
+		t.Fatalf("legacy permission-only spec should validate, got: %v", err)
+	}
+}
+
+func TestValidateSpecRejectsNeither(t *testing.T) {
+	p := &v1alpha1.TeamParameters{
+		Name:         ptrStr("x"),
+		Organisation: ptrStr("apps"),
+	}
+	if err := validateSpec(p); err == nil {
+		t.Fatalf("spec with neither unitsMap nor permission should fail validation")
+	}
+}
+
+func TestParseLegacyUnits(t *testing.T) {
+	cases := map[string][]string{
+		"":                                 nil,
+		"[]":                               nil,
+		"[repo.code]":                      {"repo.code"},
+		"[repo.code, repo.pulls]":          {"repo.code", "repo.pulls"},
+		"  [ repo.code , repo.packages ] ": {"repo.code", "repo.packages"},
+		"repo.code,repo.pulls":             {"repo.code", "repo.pulls"}, // tolerate brackets-less
+	}
+	for in, want := range cases {
+		s := in
+		got := parseLegacyUnits(&s)
+		if !sliceEq(got, want) {
+			t.Fatalf("parseLegacyUnits(%q) = %v; want %v", in, got, want)
+		}
+	}
+	if got := parseLegacyUnits(nil); got != nil {
+		t.Fatalf("parseLegacyUnits(nil) = %v; want nil", got)
+	}
+}
+
 // fullDefaultUnitsMap mirrors paramsFromSpec's expansion: every recognised
 // unit gets `none` unless overridden in `set`. Used by Observe tests to
 // build a representative server-side state.

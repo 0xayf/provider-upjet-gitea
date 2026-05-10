@@ -287,6 +287,11 @@ func (in *MembershipParameters) DeepCopyInto(out *MembershipParameters) {
 		*out = new(TeamRef)
 		**out = **in
 	}
+	if in.TeamID != nil {
+		in, out := &in.TeamID, &out.TeamID
+		*out = new(float64)
+		**out = **in
+	}
 	if in.Username != nil {
 		in, out := &in.Username, &out.Username
 		*out = new(string)

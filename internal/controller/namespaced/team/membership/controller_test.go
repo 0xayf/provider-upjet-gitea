@@ -87,6 +87,62 @@ func TestObserveMissingTeam(t *testing.T) {
 	}
 }
 
+func TestObserveLegacyTeamID(t *testing.T) {
+	// upjet-shape spec: only forProvider.teamId set, no team{} ref. The
+	// resolver should use the numeric ID directly without an API lookup.
+	api := &fakeTeamAPI{memberResp: true}
+	e := &external{api: api}
+	cr := &v1alpha1.Membership{
+		ObjectMeta: metav1.ObjectMeta{Name: "m"},
+		Spec: v1alpha1.MembershipSpec{
+			ForProvider: v1alpha1.MembershipParameters{
+				TeamID:   ptrFloat64(42),
+				Username: ptrStr("alice"),
+			},
+		},
+	}
+	obs, err := e.Observe(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Observe error: %v", err)
+	}
+	if !obs.ResourceExists {
+		t.Fatalf("expected resource exists for legacy teamId path")
+	}
+	if len(api.getCalls) != 0 {
+		t.Fatalf("legacy teamId path should not call Get(org,name); got %v", api.getCalls)
+	}
+	if len(api.memberCalls) != 1 || api.memberCalls[0].id != 42 {
+		t.Fatalf("expected IsMember(42, alice); got %v", api.memberCalls)
+	}
+}
+
+func TestObserveTeamRefWinsOverLegacyTeamID(t *testing.T) {
+	// Both set: spec.team {org,name} should win.
+	api := &fakeTeamAPI{
+		getResp:    &clients.TeamResource{ID: 99, Name: "h"},
+		memberResp: true,
+	}
+	e := &external{api: api}
+	cr := &v1alpha1.Membership{
+		ObjectMeta: metav1.ObjectMeta{Name: "m"},
+		Spec: v1alpha1.MembershipSpec{
+			ForProvider: v1alpha1.MembershipParameters{
+				Team:     &v1alpha1.TeamRef{Org: "apps", Name: "h"},
+				TeamID:   ptrFloat64(42), // ignored
+				Username: ptrStr("alice"),
+			},
+		},
+	}
+	if _, err := e.Observe(context.Background(), cr); err != nil {
+		t.Fatalf("Observe error: %v", err)
+	}
+	if len(api.memberCalls) != 1 || api.memberCalls[0].id != 99 {
+		t.Fatalf("expected IsMember(99, ...) using team-ref-resolved ID; got %v", api.memberCalls)
+	}
+}
+
+func ptrFloat64(f float64) *float64 { return &f }
+
 func TestObserveMissingUsername(t *testing.T) {
 	e := &external{api: &fakeTeamAPI{}}
 	cr := newMembership(&v1alpha1.TeamRef{Org: "apps", Name: "h"}, "")

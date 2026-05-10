@@ -30,12 +30,24 @@ type MembershipObservation struct {
 }
 
 // MembershipParameters define the desired membership of a Gitea team.
+//
+// Two ways to point at the team: the new `team` ref by org and name, or the
+// legacy `teamId` numeric ID carried over from the upjet shape for
+// back-compat. When both are set, `team` wins. Existing MRs created by
+// upstream provider v0.2.x continue to work as-is via `teamId`.
 type MembershipParameters struct {
 	// Team identifies the Gitea team by org + name. The controller
 	// resolves this to the numeric ID at reconcile time, so callers
 	// don't need to know Gitea's auto-assigned IDs.
 	// +kubebuilder:validation:Optional
 	Team *TeamRef `json:"team,omitempty"`
+
+	// TeamID is the legacy numeric team ID. Set this *or* `team`, not
+	// both. When both are set, `team` wins. Stored as float64 to match
+	// the shape on-cluster MRs already hold (the upstream Terraform
+	// provider treats numeric IDs as floats).
+	// +kubebuilder:validation:Optional
+	TeamID *float64 `json:"teamId,omitempty"`
 
 	// Username is the Gitea user to add to the team.
 	// +kubebuilder:validation:Optional
@@ -70,7 +82,7 @@ type MembershipStatus struct {
 type Membership struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.team)",message="spec.forProvider.team is a required parameter"
+	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.team) || has(self.forProvider.teamId)",message="one of spec.forProvider.team or spec.forProvider.teamId must be set"
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.username)",message="spec.forProvider.username is a required parameter"
 	Spec   MembershipSpec   `json:"spec"`
 	Status MembershipStatus `json:"status,omitempty"`

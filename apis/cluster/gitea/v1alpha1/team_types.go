@@ -30,8 +30,10 @@ type TeamObservation struct {
 	UnitsMap map[string]string `json:"unitsMap,omitempty"`
 }
 
-// TeamParameters is the desired state of a Gitea team. unitsMap is required —
-// the legacy `permission` + `units` shape is intentionally not exposed here.
+// TeamParameters is the desired state of a Gitea team. Two ways to express
+// permissions: the new per-unit `unitsMap`, or the legacy `permission` (+
+// optional `units`) pair carried over from the upjet shape for back-compat.
+// When both are set, `unitsMap` wins.
 type TeamParameters struct {
 	// Name is the team's name within the organisation. Immutable on the
 	// Gitea side after creation; renaming requires delete + recreate.
@@ -61,6 +63,24 @@ type TeamParameters struct {
 	// +kubebuilder:validation:Optional
 	CanCreateOrgRepo *bool `json:"canCreateOrgRepo,omitempty"`
 
+	// Permission is the legacy single-permission level applied uniformly
+	// across the team's units. One of `none`, `read`, `write`, `admin`.
+	// Carried over from the upjet shape for back-compat — set this *or*
+	// `unitsMap`, not both. When both are set, `unitsMap` wins. Existing
+	// MRs created by upstream provider v0.2.x continue to work as-is via
+	// this path.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=none;read;write;admin
+	Permission *string `json:"permission,omitempty"`
+
+	// Units is the legacy string-encoded list of unit names (e.g.
+	// `[repo.code, repo.pulls]`) the team's `Permission` applies to. The
+	// upstream Terraform provider serialised it as a single string, and
+	// existing on-cluster MRs still hold that shape, so we accept it as
+	// `*string` and parse on read. Empty/absent means "all units".
+	// +kubebuilder:validation:Optional
+	Units *string `json:"units,omitempty"`
+
 	// UnitsMap is the per-unit permission map. Keys must be valid Gitea
 	// team unit names; values must be one of `none`, `read`, `write`,
 	// `admin`. A unit absent from the map is `none` for that team.
@@ -70,7 +90,8 @@ type TeamParameters struct {
 	//   repo.wiki, repo.ext_wiki,
 	//   repo.pulls, repo.releases, repo.projects,
 	//   repo.packages, repo.actions
-	UnitsMap map[string]string `json:"unitsMap"`
+	// +kubebuilder:validation:Optional
+	UnitsMap map[string]string `json:"unitsMap,omitempty"`
 }
 
 // TeamSpec defines the desired state of Team.
@@ -104,7 +125,7 @@ type Team struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.name)",message="spec.forProvider.name is a required parameter"
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.organisation)",message="spec.forProvider.organisation is a required parameter"
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || (has(self.forProvider.unitsMap) && size(self.forProvider.unitsMap) > 0)",message="spec.forProvider.unitsMap must have at least one entry"
+	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || (has(self.forProvider.unitsMap) && size(self.forProvider.unitsMap) > 0) || has(self.forProvider.permission)",message="one of spec.forProvider.unitsMap (non-empty) or spec.forProvider.permission must be set"
 	Spec   TeamSpec   `json:"spec"`
 	Status TeamStatus `json:"status,omitempty"`
 }

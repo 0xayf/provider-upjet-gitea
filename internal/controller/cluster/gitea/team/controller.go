@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
@@ -281,7 +282,9 @@ func (e *external) reposUpToDate(ctx context.Context, got *clients.TeamResource,
 
 // validateSpec runs the spec-side checks before any API call. Returning an
 // early error here keeps Gitea's responses out of the failure mode for
-// missing or malformed inputs.
+// missing or malformed inputs. Accepts both the modern `unitsMap` shape and
+// the legacy `permission` (+ optional `units`) pair from the upjet shape;
+// when both are set, `unitsMap` wins.
 func validateSpec(p *v1alpha1.TeamParameters) error {
 	if p.Name == nil || *p.Name == "" {
 		return errors.New(errMissingName)
@@ -289,15 +292,30 @@ func validateSpec(p *v1alpha1.TeamParameters) error {
 	if p.Organisation == nil || *p.Organisation == "" {
 		return errors.New(errMissingOrg)
 	}
-	if len(p.UnitsMap) == 0 {
+	hasModern := len(p.UnitsMap) > 0
+	hasLegacy := p.Permission != nil && *p.Permission != ""
+	if !hasModern && !hasLegacy {
 		return errors.New(errMissingUnits)
 	}
-	for unit, level := range p.UnitsMap {
-		if _, ok := clients.ValidTeamUnits[unit]; !ok {
-			return fmt.Errorf("%s: %q", errInvalidUnits, unit)
+	if hasModern {
+		for unit, level := range p.UnitsMap {
+			if _, ok := clients.ValidTeamUnits[unit]; !ok {
+				return fmt.Errorf("%s: %q", errInvalidUnits, unit)
+			}
+			if !clients.TeamPermissionLevel(level).IsValid() {
+				return fmt.Errorf("%s: %s=%q", errInvalidUnits, unit, level)
+			}
 		}
-		if !clients.TeamPermissionLevel(level).IsValid() {
-			return fmt.Errorf("%s: %s=%q", errInvalidUnits, unit, level)
+	}
+	if hasLegacy {
+		if !clients.TeamPermissionLevel(*p.Permission).IsValid() {
+			return fmt.Errorf("%s: permission=%q", errInvalidUnits, *p.Permission)
+		}
+		// Validate legacy `units` list members if provided.
+		for _, u := range parseLegacyUnits(p.Units) {
+			if _, ok := clients.ValidTeamUnits[u]; !ok {
+				return fmt.Errorf("%s: %q", errInvalidUnits, u)
+			}
 		}
 	}
 	return nil
@@ -307,13 +325,38 @@ func validateSpec(p *v1alpha1.TeamParameters) error {
 // We expand UnitsMap to cover every recognised unit with an explicit level
 // (defaulting absent units to "none") so PATCH calls fully replace the
 // team's permission state — Gitea's PATCH only touches the keys we send.
+//
+// Legacy translation rules:
+//   - `unitsMap` set: use it directly; ignore `permission`/`units`.
+//   - `unitsMap` empty, `permission` + `units` set: apply `permission` to
+//     each named unit; everything else → `none`.
+//   - `unitsMap` empty, `permission` set, `units` empty: apply `permission`
+//     to all 10 recognised units (matches what upjet+Gitea did before).
 func paramsFromSpec(p *v1alpha1.TeamParameters) clients.TeamParams {
 	full := make(map[string]clients.TeamPermissionLevel, len(clients.ValidTeamUnits))
 	for unit := range clients.ValidTeamUnits {
 		full[unit] = clients.TeamPermNone
 	}
-	for unit, level := range p.UnitsMap {
-		full[unit] = clients.TeamPermissionLevel(level)
+	switch {
+	case len(p.UnitsMap) > 0:
+		for unit, level := range p.UnitsMap {
+			full[unit] = clients.TeamPermissionLevel(level)
+		}
+	case p.Permission != nil && *p.Permission != "":
+		level := clients.TeamPermissionLevel(*p.Permission)
+		named := parseLegacyUnits(p.Units)
+		if len(named) == 0 {
+			// Empty/absent units list → permission applies uniformly.
+			for unit := range clients.ValidTeamUnits {
+				full[unit] = level
+			}
+		} else {
+			for _, unit := range named {
+				if _, ok := clients.ValidTeamUnits[unit]; ok {
+					full[unit] = level
+				}
+			}
+		}
 	}
 	return clients.TeamParams{
 		Name:                    deref(p.Name),
@@ -322,6 +365,31 @@ func paramsFromSpec(p *v1alpha1.TeamParameters) clients.TeamParams {
 		CanCreateOrgRepo:        boolValue(p.CanCreateOrgRepo),
 		UnitsMap:                full,
 	}
+}
+
+// parseLegacyUnits parses the upjet-style string-encoded units list, e.g.
+// `"[repo.code, repo.pulls]"` -> ["repo.code", "repo.pulls"]. Tolerates
+// surrounding brackets, whitespace, and an empty/nil input. Returns nil
+// for an empty list (callers treat that as "all units").
+func parseLegacyUnits(s *string) []string {
+	if s == nil || *s == "" {
+		return nil
+	}
+	raw := strings.TrimSpace(*s)
+	raw = strings.TrimPrefix(raw, "[")
+	raw = strings.TrimSuffix(raw, "]")
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // isTeamUpToDate reports whether the spec's team-level fields match Gitea.
