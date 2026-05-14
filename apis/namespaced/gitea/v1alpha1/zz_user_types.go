@@ -78,10 +78,6 @@ type UserInitParameters struct {
 	// Flag to send a notification about the user creation to the defined `email`
 	SendNotification *bool `json:"sendNotification,omitempty" tf:"send_notification,omitempty"`
 
-	// (String) Username of the user to be created
-	// Username of the user to be created
-	Username *string `json:"username,omitempty" tf:"username,omitempty"`
-
 	// (String) Visibility of the user. Can be public, limited or private
 	// Visibility of the user. Can be `public`, `limited` or `private`
 	Visibility *string `json:"visibility,omitempty" tf:"visibility,omitempty"`
@@ -149,10 +145,6 @@ type UserObservation struct {
 	// (Boolean) Flag to send a notification about the user creation to the defined email
 	// Flag to send a notification about the user creation to the defined `email`
 	SendNotification *bool `json:"sendNotification,omitempty" tf:"send_notification,omitempty"`
-
-	// (String) Username of the user to be created
-	// Username of the user to be created
-	Username *string `json:"username,omitempty" tf:"username,omitempty"`
 
 	// (String) Visibility of the user. Can be public, limited or private
 	// Visibility of the user. Can be `public`, `limited` or `private`
@@ -240,11 +232,6 @@ type UserParameters struct {
 	// +kubebuilder:validation:Optional
 	SendNotification *bool `json:"sendNotification,omitempty" tf:"send_notification,omitempty"`
 
-	// (String) Username of the user to be created
-	// Username of the user to be created
-	// +kubebuilder:validation:Optional
-	Username *string `json:"username,omitempty" tf:"username,omitempty"`
-
 	// (String) Visibility of the user. Can be public, limited or private
 	// Visibility of the user. Can be `public`, `limited` or `private`
 	// +kubebuilder:validation:Optional
@@ -290,7 +277,6 @@ type User struct {
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.email) || (has(self.initProvider) && has(self.initProvider.email))",message="spec.forProvider.email is a required parameter"
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.loginName) || (has(self.initProvider) && has(self.initProvider.loginName))",message="spec.forProvider.loginName is a required parameter"
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.passwordSecretRef)",message="spec.forProvider.passwordSecretRef is a required parameter"
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.username) || (has(self.initProvider) && has(self.initProvider.username))",message="spec.forProvider.username is a required parameter"
 	Spec   UserSpec   `json:"spec"`
 	Status UserStatus `json:"status,omitempty"`
 }

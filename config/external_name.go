@@ -7,8 +7,13 @@ import (
 // ExternalNameConfigs contains all external name configurations for this
 // provider.
 var ExternalNameConfigs = map[string]config.ExternalName{
-	// Organizations
-	"gitea_org": config.IdentifierFromProvider,
+	// Organizations and Users. External-name maps to the URL-key on the
+	// Gitea API (/orgs/{name} and /users/{username}) so a single XR
+	// claim can both adopt an existing org/user and create one on a
+	// fresh cluster — neither possible when external-name is the
+	// numeric ID Gitea assigns on create.
+	"gitea_org":  config.ParameterAsIdentifier("name"),
+	"gitea_user": config.ParameterAsIdentifier("username"),
 
 	// Teams and membership are managed by hand-written controllers in
 	// internal/controller/{cluster,namespaced}/gitea/team and
@@ -17,9 +22,6 @@ var ExternalNameConfigs = map[string]config.ExternalName{
 	// Terraform-backed shells for them. The hand-written controllers
 	// drive Gitea's per-unit permission model directly via the API.
 	"gitea_team_members": config.IdentifierFromProvider,
-
-	// Users
-	"gitea_user": config.IdentifierFromProvider,
 
 	// Repositories
 	"gitea_repository":                  config.IdentifierFromProvider,

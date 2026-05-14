@@ -73,11 +73,6 @@ spec:
                   location:
                     description: (String)
                     type: string
-                  name:
-                    description: |-
-                      (String) The name of the organisation without spaces.
-                      The name of the organisation without spaces.
-                    type: string
                   repoAdminChangeTeamAccess:
                     description: (Boolean)
                     type: boolean
@@ -117,11 +112,6 @@ spec:
                     type: string
                   location:
                     description: (String)
-                    type: string
-                  name:
-                    description: |-
-                      (String) The name of the organisation without spaces.
-                      The name of the organisation without spaces.
                     type: string
                   repoAdminChangeTeamAccess:
                     description: (Boolean)
@@ -195,11 +185,6 @@ spec:
             required:
             - forProvider
             type: object
-            x-kubernetes-validations:
-            - message: spec.forProvider.name is a required parameter
-              rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.name)
-                || (has(self.initProvider) && has(self.initProvider.name))'
           status:
             description: OrgStatus defines the observed state of Org.
             properties:
@@ -223,11 +208,6 @@ spec:
                     type: string
                   location:
                     description: (String)
-                    type: string
-                  name:
-                    description: |-
-                      (String) The name of the organisation without spaces.
-                      The name of the organisation without spaces.
                     type: string
                   repoAdminChangeTeamAccess:
                     description: (Boolean)

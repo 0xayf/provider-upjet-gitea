@@ -8,6 +8,3 @@ package v1alpha1
 
 // Hub marks this type as a conversion hub.
 func (tr *Members) Hub() {}
-
-// Hub marks this type as a conversion hub.
-func (tr *Membership) Hub() {}

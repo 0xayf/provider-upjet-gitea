@@ -49,4 +49,3 @@ spec:
     passwordSecretRef:
       key: example-key
       name: example-secret
-    username: repo_key_example_user

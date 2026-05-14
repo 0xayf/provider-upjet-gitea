@@ -8,7 +8,7 @@ metadata:
   name: user-fork-of-repo1-in-org1
 spec:
   forProvider:
-    owner: org-example-org
+    owner: ${gitea_org.org1.name}
     repo: repository-test
 
 ---
@@ -22,8 +22,7 @@ metadata:
     testing.upbound.io/example-name: org1
   name: org1
 spec:
-  forProvider:
-    name: org1
+  forProvider: {}
 
 ---
 
@@ -36,8 +35,7 @@ metadata:
     testing.upbound.io/example-name: org2
   name: org2
 spec:
-  forProvider:
-    name: org2
+  forProvider: {}
 
 ---
 

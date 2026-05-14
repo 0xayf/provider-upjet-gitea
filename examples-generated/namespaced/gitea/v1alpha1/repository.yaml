@@ -14,7 +14,7 @@ spec:
     license: MIT
     name: repository-test
     private: true
-    username: user-test
+    username: ${gitea_user.example.username}
 
 ---
 
@@ -34,4 +34,3 @@ spec:
     passwordSecretRef:
       key: example-key
       name: example-secret
-    username: repo_example_user

@@ -15,4 +15,3 @@ spec:
     passwordSecretRef:
       key: example-key
       name: example-secret
-    username: user-test

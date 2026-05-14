@@ -22,25 +22,7 @@ metadata:
     testing.upbound.io/example-name: example_org
   name: example-org
 spec:
-  forProvider:
-    name: members_example_org
-
----
-
-apiVersion: gitea.gitea.crossplane.io/v1alpha1
-kind: Team
-metadata:
-  annotations:
-    meta.upbound.io/example-id: team/v1alpha1/members
-  labels:
-    testing.upbound.io/example-name: example_team
-  name: example-team
-spec:
-  forProvider:
-    description: An example of team membership
-    name: members_example_team
-    organisation: members_example_org
-    permission: read
+  forProvider: {}
 
 ---
 
@@ -61,4 +43,3 @@ spec:
       key: example-key
       name: example-secret
       namespace: upbound-system
-    username: members_example_user_${count.index}

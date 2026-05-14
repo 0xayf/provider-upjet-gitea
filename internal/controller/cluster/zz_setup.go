@@ -13,7 +13,6 @@ import (
 	fork "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/fork"
 	org "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/org"
 	repository "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/repository"
-	team "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/team"
 	token "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/token"
 	user "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gitea/user"
 	key "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/gpg/key"
@@ -26,7 +25,6 @@ import (
 	keyrepository "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/key"
 	webhook "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/webhook"
 	members "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/team/members"
-	membership "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/team/membership"
 )
 
 // Setup creates all controllers with the supplied logger and adds them to
@@ -37,7 +35,6 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		fork.Setup,
 		org.Setup,
 		repository.Setup,
-		team.Setup,
 		token.Setup,
 		user.Setup,
 		key.Setup,
@@ -50,7 +47,6 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		keyrepository.Setup,
 		webhook.Setup,
 		members.Setup,
-		membership.Setup,
 	} {
 		if err := setup(mgr, o); err != nil {
 			return err
@@ -67,7 +63,6 @@ func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 		fork.SetupGated,
 		org.SetupGated,
 		repository.SetupGated,
-		team.SetupGated,
 		token.SetupGated,
 		user.SetupGated,
 		key.SetupGated,
@@ -80,7 +75,6 @@ func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 		keyrepository.SetupGated,
 		webhook.SetupGated,
 		members.SetupGated,
-		membership.SetupGated,
 	} {
 		if err := setup(mgr, o); err != nil {
 			return err
