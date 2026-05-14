@@ -34,9 +34,12 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Token is the Schema for the Tokens API. gitea_token manages gitea
-          Access Tokens. Due to upstream limitations (see https://gitea.com/gitea/go-sdk/issues/610)
-          this resource can only be used with username/password provider configuration
+        description: |-
+          Token manages a Gitea access token. The hand-written controller talks
+          to /users/{username}/tokens directly via HTTP Basic auth (the only
+          auth mode Gitea accepts on this endpoint family), captures the token
+          value at creation time, and re-mints on scope drift so PAT scope
+          rotation becomes a plain spec edit.
         properties:
           apiVersion:
             description: |-
@@ -56,7 +59,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TokenSpec defines the desired state of Token
+            description: TokenSpec defines the desired state of Token.
             properties:
               deletionPolicy:
                 default: Delete
@@ -73,47 +76,28 @@ spec:
                 - Delete
                 type: string
               forProvider:
-                properties:
-                  name:
-                    description: |-
-                      (String) The name of the Access Token
-                      The name of the Access Token
-                    type: string
-                  scopes:
-                    description: |-
-                      (Set of String) List of string representations of scopes for the token
-                      List of string representations of scopes for the token
-                    items:
-                      type: string
-                    type: array
-                    x-kubernetes-list-type: set
-                type: object
-              initProvider:
                 description: |-
-                  THIS IS A BETA FIELD. It will be honored
-                  unless the Management Policies feature flag is disabled.
-                  InitProvider holds the same fields as ForProvider, with the exception
-                  of Identifier and other resource reference fields. The fields that are
-                  in InitProvider are merged into ForProvider when the resource is created.
-                  The same fields are also added to the terraform ignore_changes hook, to
-                  avoid updating them after creation. This is useful for fields that are
-                  required on creation, but we do not desire to update them after creation,
-                  for example because of an external controller is managing them, like an
-                  autoscaler.
+                  TokenParameters defines the desired state of a Gitea access token. The
+                  token is minted under the user identified by the credentials in the
+                  referenced ProviderConfig (Gitea's /users/{username}/tokens endpoint
+                  accepts only HTTP Basic auth as that user).
                 properties:
                   name:
                     description: |-
-                      (String) The name of the Access Token
-                      The name of the Access Token
+                      Name is the token's display name. Immutable on the Gitea side after
+                      creation; changing it requires destroy + recreate, which the
+                      controller handles transparently.
                     type: string
                   scopes:
                     description: |-
-                      (Set of String) List of string representations of scopes for the token
-                      List of string representations of scopes for the token
+                      Scopes is the set of OAuth scopes the token authorises. Valid
+                      scopes are documented in Gitea's API reference. Changing this set
+                      triggers a delete-and-recreate (Gitea has no PATCH for tokens);
+                      the controller updates the connection secret with the new value,
+                      so downstream consumers see the rotation automatically.
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               managementPolicies:
                 default:
@@ -204,36 +188,43 @@ spec:
             x-kubernetes-validations:
             - message: spec.forProvider.name is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.name)
-                || (has(self.initProvider) && has(self.initProvider.name))'
-            - message: spec.forProvider.scopes is a required parameter
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.name)'
+            - message: spec.forProvider.scopes must contain at least one scope
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.scopes)
-                || (has(self.initProvider) && has(self.initProvider.scopes))'
+                || ''Update'' in self.managementPolicies) || (has(self.forProvider.scopes)
+                && size(self.forProvider.scopes) > 0)'
           status:
             description: TokenStatus defines the observed state of Token.
             properties:
               atProvider:
+                description: TokenObservation reflects observed state from Gitea.
                 properties:
                   id:
-                    description: (String) The ID of this resource.
+                    description: |-
+                      ID is Gitea's numeric token identifier. Stored as a string here for
+                      consistency with the upjet-shape MRs already on cluster.
                     type: string
                   lastEight:
-                    description: (String)
-                    type: string
-                  name:
                     description: |-
-                      (String) The name of the Access Token
-                      The name of the Access Token
+                      LastEight is the last eight characters of the token value as
+                      returned at creation time. Useful for identifying which token a
+                      claim corresponds to in the Gitea UI.
+                    type: string
+                  rotatedAt:
+                    description: |-
+                      RotatedAt is the timestamp at which the controller last performed
+                      a delete-and-recreate to reconcile a scope-set drift. Tokens
+                      cannot be patched in place — Gitea has no PATCH endpoint — so any
+                      scope change requires re-minting the token value.
+                    format: date-time
                     type: string
                   scopes:
                     description: |-
-                      (Set of String) List of string representations of scopes for the token
-                      List of string representations of scopes for the token
+                      Scopes is the set Gitea reports for this token. The controller
+                      compares this against spec.forProvider.scopes to detect scope drift.
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               conditions:
                 description: Conditions of the resource.

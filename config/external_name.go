@@ -34,8 +34,12 @@ var ExternalNameConfigs = map[string]config.ExternalName{
 	"gitea_repository_branch_protection": config.IdentifierFromProvider,
 	"gitea_repository_actions_variable": config.IdentifierFromProvider,
 
-	// Tokens and keys
-	"gitea_token":      config.IdentifierFromProvider,
+	// Tokens are managed by a hand-written controller in
+	// internal/controller/{cluster,namespaced}/gitea/token to drive
+	// Gitea's /users/{username}/tokens endpoints directly (basic auth
+	// only) and to reconcile scope drift by Delete+Create — Gitea has no
+	// PATCH for tokens. Intentionally absent from this map so upjet
+	// does not regenerate a Terraform-backed shell.
 	"gitea_public_key": config.IdentifierFromProvider,
 	"gitea_gpg_key":    config.IdentifierFromProvider,
 

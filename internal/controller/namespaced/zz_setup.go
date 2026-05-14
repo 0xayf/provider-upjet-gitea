@@ -13,7 +13,6 @@ import (
 	fork "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/fork"
 	org "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/org"
 	repository "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/repository"
-	token "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/token"
 	user "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/user"
 	key "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gpg/key"
 	app "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/oauth2/app"
@@ -34,7 +33,6 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		fork.Setup,
 		org.Setup,
 		repository.Setup,
-		token.Setup,
 		user.Setup,
 		key.Setup,
 		app.Setup,
@@ -61,7 +59,6 @@ func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 		fork.SetupGated,
 		org.SetupGated,
 		repository.SetupGated,
-		token.SetupGated,
 		user.SetupGated,
 		key.SetupGated,
 		app.SetupGated,

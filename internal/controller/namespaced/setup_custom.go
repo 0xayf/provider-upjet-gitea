@@ -14,6 +14,7 @@ import (
 	"github.com/crossplane/upjet/v2/pkg/controller"
 
 	team "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/team"
+	token "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/token"
 	actionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/actionssecret"
 	orgactionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/orgactionssecret"
 	useractionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/useractionssecret"
@@ -25,6 +26,7 @@ func SetupCustom(mgr ctrl.Manager, o controller.Options) error {
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
 		team.Setup,
 		membership.Setup,
+		token.Setup,
 		actionssecret.Setup,
 		orgactionssecret.Setup,
 		useractionssecret.Setup,
@@ -41,6 +43,7 @@ func SetupCustomGated(mgr ctrl.Manager, o controller.Options) error {
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
 		team.SetupGated,
 		membership.SetupGated,
+		token.SetupGated,
 		actionssecret.SetupGated,
 		orgactionssecret.SetupGated,
 		useractionssecret.SetupGated,
