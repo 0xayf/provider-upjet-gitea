@@ -23,12 +23,15 @@ var ExternalNameConfigs = map[string]config.ExternalName{
 	// drive Gitea's per-unit permission model directly via the API.
 	"gitea_team_members": config.IdentifierFromProvider,
 
-	// Repositories
+	// Repositories. gitea_repository_actions_secret is managed by a
+	// hand-written controller in internal/controller/{cluster,namespaced}/repository/actionssecret
+	// to detect value rotation via a SHA-256 hash of the source secret;
+	// it's intentionally absent from this map so upjet does not
+	// regenerate a Terraform-backed shell for it.
 	"gitea_repository":                  config.IdentifierFromProvider,
 	"gitea_repository_key":              config.IdentifierFromProvider,
 	"gitea_repository_webhook":          config.IdentifierFromProvider,
 	"gitea_repository_branch_protection": config.IdentifierFromProvider,
-	"gitea_repository_actions_secret":   config.IdentifierFromProvider,
 	"gitea_repository_actions_variable": config.IdentifierFromProvider,
 
 	// Tokens and keys

@@ -13,13 +13,19 @@ import (
 
 	"github.com/crossplane/upjet/v2/pkg/controller"
 
+	team "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/gitea/team"
+	actionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/actionssecret"
 	orgactionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/orgactionssecret"
 	useractionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/repository/useractionssecret"
+	membership "github.com/0xayf/provider-upjet-gitea/internal/controller/namespaced/team/membership"
 )
 
 // SetupCustom registers hand-written namespaced controllers.
 func SetupCustom(mgr ctrl.Manager, o controller.Options) error {
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
+		team.Setup,
+		membership.Setup,
+		actionssecret.Setup,
 		orgactionssecret.Setup,
 		useractionssecret.Setup,
 	} {
@@ -33,6 +39,9 @@ func SetupCustom(mgr ctrl.Manager, o controller.Options) error {
 // SetupCustomGated registers hand-written namespaced controllers gated.
 func SetupCustomGated(mgr ctrl.Manager, o controller.Options) error {
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
+		team.SetupGated,
+		membership.SetupGated,
+		actionssecret.SetupGated,
 		orgactionssecret.SetupGated,
 		useractionssecret.SetupGated,
 	} {

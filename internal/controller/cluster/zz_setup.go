@@ -19,7 +19,6 @@ import (
 	app "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/oauth2/app"
 	providerconfig "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/providerconfig"
 	keypublic "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/public/key"
-	actionssecret "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/actionssecret"
 	actionsvariable "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/actionsvariable"
 	branchprotection "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/branchprotection"
 	keyrepository "github.com/0xayf/provider-upjet-gitea/internal/controller/cluster/repository/key"
@@ -41,7 +40,6 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		app.Setup,
 		providerconfig.Setup,
 		keypublic.Setup,
-		actionssecret.Setup,
 		actionsvariable.Setup,
 		branchprotection.Setup,
 		keyrepository.Setup,
@@ -69,7 +67,6 @@ func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 		app.SetupGated,
 		providerconfig.SetupGated,
 		keypublic.SetupGated,
-		actionssecret.SetupGated,
 		actionsvariable.SetupGated,
 		branchprotection.SetupGated,
 		keyrepository.SetupGated,
