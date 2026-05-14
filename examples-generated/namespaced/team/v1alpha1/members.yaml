@@ -24,7 +24,8 @@ metadata:
   name: example-org
   namespace: crossplane-system
 spec:
-  forProvider: {}
+  forProvider:
+    name: members_example_org
 
 ---
 
@@ -45,3 +46,4 @@ spec:
     passwordSecretRef:
       key: example-key
       name: example-secret
+    username: members_example_user_${count.index}

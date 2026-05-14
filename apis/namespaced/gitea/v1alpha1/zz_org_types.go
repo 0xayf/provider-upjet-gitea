@@ -27,6 +27,10 @@ type OrgInitParameters struct {
 	// (String)
 	Location *string `json:"location,omitempty" tf:"location,omitempty"`
 
+	// (String) The name of the organisation without spaces.
+	// The name of the organisation without spaces.
+	Name *string `json:"name,omitempty" tf:"name,omitempty"`
+
 	// (Boolean)
 	RepoAdminChangeTeamAccess *bool `json:"repoAdminChangeTeamAccess,omitempty" tf:"repo_admin_change_team_access,omitempty"`
 
@@ -57,6 +61,10 @@ type OrgObservation struct {
 
 	// (String)
 	Location *string `json:"location,omitempty" tf:"location,omitempty"`
+
+	// (String) The name of the organisation without spaces.
+	// The name of the organisation without spaces.
+	Name *string `json:"name,omitempty" tf:"name,omitempty"`
 
 	// (Boolean)
 	RepoAdminChangeTeamAccess *bool `json:"repoAdminChangeTeamAccess,omitempty" tf:"repo_admin_change_team_access,omitempty"`
@@ -89,6 +97,11 @@ type OrgParameters struct {
 	// (String)
 	// +kubebuilder:validation:Optional
 	Location *string `json:"location,omitempty" tf:"location,omitempty"`
+
+	// (String) The name of the organisation without spaces.
+	// The name of the organisation without spaces.
+	// +kubebuilder:validation:Optional
+	Name *string `json:"name,omitempty" tf:"name,omitempty"`
 
 	// (Boolean)
 	// +kubebuilder:validation:Optional
@@ -141,8 +154,9 @@ type OrgStatus struct {
 type Org struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              OrgSpec   `json:"spec"`
-	Status            OrgStatus `json:"status,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.name) || (has(self.initProvider) && has(self.initProvider.name))",message="spec.forProvider.name is a required parameter"
+	Spec   OrgSpec   `json:"spec"`
+	Status OrgStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

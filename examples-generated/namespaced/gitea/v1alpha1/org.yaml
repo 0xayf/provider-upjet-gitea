@@ -8,7 +8,8 @@ metadata:
   name: example
   namespace: crossplane-system
 spec:
-  forProvider: {}
+  forProvider:
+    name: org-example-org
 
 ---
 

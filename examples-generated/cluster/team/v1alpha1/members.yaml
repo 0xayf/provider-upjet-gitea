@@ -22,7 +22,8 @@ metadata:
     testing.upbound.io/example-name: example_org
   name: example-org
 spec:
-  forProvider: {}
+  forProvider:
+    name: members_example_org
 
 ---
 
@@ -43,3 +44,4 @@ spec:
       key: example-key
       name: example-secret
       namespace: upbound-system
+    username: members_example_user_${count.index}

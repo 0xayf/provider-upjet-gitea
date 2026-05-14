@@ -7,13 +7,15 @@ import (
 // ExternalNameConfigs contains all external name configurations for this
 // provider.
 var ExternalNameConfigs = map[string]config.ExternalName{
-	// Organizations and Users. External-name maps to the URL-key on the
-	// Gitea API (/orgs/{name} and /users/{username}) so a single XR
-	// claim can both adopt an existing org/user and create one on a
-	// fresh cluster — neither possible when external-name is the
-	// numeric ID Gitea assigns on create.
-	"gitea_org":  config.ParameterAsIdentifier("name"),
-	"gitea_user": config.ParameterAsIdentifier("username"),
+	// Organizations and Users. We use IdentifierFromProvider rather than
+	// ParameterAsIdentifier(name|username) because the upstream
+	// terraform-provider-gitea's Read functions do
+	// strconv.ParseInt(d.Id(), 10, 64) — so an alphabetic external-name
+	// is parsed as 0 and the lookup misses. Adopt-by-name therefore
+	// needs a hand-written controller (the path we took for Token);
+	// covered in tasks.md.
+	"gitea_org":  config.IdentifierFromProvider,
+	"gitea_user": config.IdentifierFromProvider,
 
 	// Teams and membership are managed by hand-written controllers in
 	// internal/controller/{cluster,namespaced}/gitea/team and

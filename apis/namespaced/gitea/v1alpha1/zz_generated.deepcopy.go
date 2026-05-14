@@ -247,6 +247,11 @@ func (in *OrgInitParameters) DeepCopyInto(out *OrgInitParameters) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Name != nil {
+		in, out := &in.Name, &out.Name
+		*out = new(string)
+		**out = **in
+	}
 	if in.RepoAdminChangeTeamAccess != nil {
 		in, out := &in.RepoAdminChangeTeamAccess, &out.RepoAdminChangeTeamAccess
 		*out = new(bool)
@@ -334,6 +339,11 @@ func (in *OrgObservation) DeepCopyInto(out *OrgObservation) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Name != nil {
+		in, out := &in.Name, &out.Name
+		*out = new(string)
+		**out = **in
+	}
 	if in.RepoAdminChangeTeamAccess != nil {
 		in, out := &in.RepoAdminChangeTeamAccess, &out.RepoAdminChangeTeamAccess
 		*out = new(bool)
@@ -387,6 +397,11 @@ func (in *OrgParameters) DeepCopyInto(out *OrgParameters) {
 	}
 	if in.Location != nil {
 		in, out := &in.Location, &out.Location
+		*out = new(string)
+		**out = **in
+	}
+	if in.Name != nil {
+		in, out := &in.Name, &out.Name
 		*out = new(string)
 		**out = **in
 	}
@@ -1641,6 +1656,11 @@ func (in *UserInitParameters) DeepCopyInto(out *UserInitParameters) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Username != nil {
+		in, out := &in.Username, &out.Username
+		*out = new(string)
+		**out = **in
+	}
 	if in.Visibility != nil {
 		in, out := &in.Visibility, &out.Visibility
 		*out = new(string)
@@ -1778,6 +1798,11 @@ func (in *UserObservation) DeepCopyInto(out *UserObservation) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Username != nil {
+		in, out := &in.Username, &out.Username
+		*out = new(string)
+		**out = **in
+	}
 	if in.Visibility != nil {
 		in, out := &in.Visibility, &out.Visibility
 		*out = new(string)
@@ -1877,6 +1902,11 @@ func (in *UserParameters) DeepCopyInto(out *UserParameters) {
 	if in.SendNotification != nil {
 		in, out := &in.SendNotification, &out.SendNotification
 		*out = new(bool)
+		**out = **in
+	}
+	if in.Username != nil {
+		in, out := &in.Username, &out.Username
+		*out = new(string)
 		**out = **in
 	}
 	if in.Visibility != nil {

@@ -47,3 +47,4 @@ spec:
       key: example-key
       name: example-secret
       namespace: upbound-system
+    username: repo_key_example_user

@@ -11,7 +11,7 @@ spec:
     content: ${file("${path.module}/post-receive.sh")}
     name: post-receive
     repo: repository-test
-    user: ${gitea_org.example.name}
+    user: org-example-org
 
 ---
 
@@ -24,7 +24,8 @@ metadata:
     testing.upbound.io/example-name: example
   name: example
 spec:
-  forProvider: {}
+  forProvider:
+    name: git-hook-example-org
 
 ---
 

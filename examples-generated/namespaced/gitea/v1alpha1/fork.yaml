@@ -9,7 +9,7 @@ metadata:
   namespace: crossplane-system
 spec:
   forProvider:
-    owner: ${gitea_org.org1.name}
+    owner: org-example-org
     repo: repository-test
 
 ---
@@ -24,7 +24,8 @@ metadata:
   name: org1
   namespace: crossplane-system
 spec:
-  forProvider: {}
+  forProvider:
+    name: org1
 
 ---
 
@@ -38,7 +39,8 @@ metadata:
   name: org2
   namespace: crossplane-system
 spec:
-  forProvider: {}
+  forProvider:
+    name: org2
 
 ---
 

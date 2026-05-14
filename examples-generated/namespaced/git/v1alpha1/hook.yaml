@@ -12,7 +12,7 @@ spec:
     content: ${file("${path.module}/post-receive.sh")}
     name: post-receive
     repo: repository-test
-    user: ${gitea_org.example.name}
+    user: org-example-org
 
 ---
 
@@ -26,7 +26,8 @@ metadata:
   name: example
   namespace: crossplane-system
 spec:
-  forProvider: {}
+  forProvider:
+    name: git-hook-example-org
 
 ---
 

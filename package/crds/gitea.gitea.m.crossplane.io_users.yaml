@@ -142,6 +142,11 @@ spec:
                       (Boolean) Flag to send a notification about the user creation to the defined email
                       Flag to send a notification about the user creation to the defined `email`
                     type: boolean
+                  username:
+                    description: |-
+                      (String) Username of the user to be created
+                      Username of the user to be created
+                    type: string
                   visibility:
                     description: |-
                       (String) Visibility of the user. Can be public, limited or private
@@ -243,6 +248,11 @@ spec:
                       (Boolean) Flag to send a notification about the user creation to the defined email
                       Flag to send a notification about the user creation to the defined `email`
                     type: boolean
+                  username:
+                    description: |-
+                      (String) Username of the user to be created
+                      Username of the user to be created
+                    type: string
                   visibility:
                     description: |-
                       (String) Visibility of the user. Can be public, limited or private
@@ -321,6 +331,10 @@ spec:
             - message: spec.forProvider.passwordSecretRef is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
                 || ''Update'' in self.managementPolicies) || has(self.forProvider.passwordSecretRef)'
+            - message: spec.forProvider.username is a required parameter
+              rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.username)
+                || (has(self.initProvider) && has(self.initProvider.username))'
           status:
             description: UserStatus defines the observed state of User.
             properties:
@@ -397,6 +411,11 @@ spec:
                       (Boolean) Flag to send a notification about the user creation to the defined email
                       Flag to send a notification about the user creation to the defined `email`
                     type: boolean
+                  username:
+                    description: |-
+                      (String) Username of the user to be created
+                      Username of the user to be created
+                    type: string
                   visibility:
                     description: |-
                       (String) Visibility of the user. Can be public, limited or private

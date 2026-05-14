@@ -13,7 +13,7 @@ spec:
     license: MIT
     name: repository-test
     private: true
-    username: ${gitea_user.example.username}
+    username: user-test
 
 ---
 
@@ -33,3 +33,4 @@ spec:
       key: example-key
       name: example-secret
       namespace: upbound-system
+    username: repo_example_user

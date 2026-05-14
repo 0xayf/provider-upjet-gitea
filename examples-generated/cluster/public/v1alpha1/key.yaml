@@ -13,7 +13,7 @@ spec:
       name: example-secret
       namespace: upbound-system
     title: public-key-test
-    username: ${gitea_user.test.username}
+    username: user-test
 
 ---
 
@@ -34,3 +34,4 @@ spec:
       key: example-key
       name: example-secret
       namespace: upbound-system
+    username: public-key-test
