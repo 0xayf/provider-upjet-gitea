@@ -6,6 +6,7 @@ package token
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +52,7 @@ func newCR() *v1alpha1.Token {
 		Spec: v1alpha1.TokenSpec{
 			ForProvider: v1alpha1.TokenParameters{
 				Name:   ptrStr("hermes-agent-ci-bot-pat"),
-				Scopes: []string{"read:user", "write:package", "write:repository"},
+				Scopes: []string{"read:user", "read:package", "write:package", "write:repository"},
 			},
 		},
 	}
@@ -104,6 +105,10 @@ func TestCreate_PostsAndCapturesValue(t *testing.T) {
 	if cr.Status.AtProvider.LastEight == nil || *cr.Status.AtProvider.LastEight != "23456789" {
 		t.Fatalf("status.atProvider.lastEight = %v, want 23456789", cr.Status.AtProvider.LastEight)
 	}
+	wantScopes := []string{"read:user", "write:package", "write:repository"}
+	if len(api.createArgs) != 1 || !reflect.DeepEqual(api.createArgs[0].scopes, wantScopes) {
+		t.Fatalf("Create scopes = %v, want %v", api.createArgs, wantScopes)
+	}
 }
 
 func TestUpdate_RotatesByDeleteThenCreate(t *testing.T) {
@@ -122,6 +127,10 @@ func TestUpdate_RotatesByDeleteThenCreate(t *testing.T) {
 	}
 	if len(api.createArgs) != 1 {
 		t.Fatalf("expected one Create call, got %d", len(api.createArgs))
+	}
+	wantScopes := []string{"read:user", "write:issue", "write:package", "write:repository"}
+	if !reflect.DeepEqual(api.createArgs[0].scopes, wantScopes) {
+		t.Fatalf("Update create scopes = %v, want %v", api.createArgs[0].scopes, wantScopes)
 	}
 	if string(upd.ConnectionDetails["token"]) != "freshvalue" {
 		t.Fatalf("rotated token value not in ConnectionDetails")

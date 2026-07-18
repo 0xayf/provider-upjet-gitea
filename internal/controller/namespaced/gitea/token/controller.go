@@ -6,7 +6,6 @@ package token
 
 import (
 	"context"
-	"sort"
 	"strconv"
 	"time"
 
@@ -97,22 +96,6 @@ func tokenName(cr *v1alpha1.Token) string {
 	return *cr.Spec.ForProvider.Name
 }
 
-func scopesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	ac := append([]string{}, a...)
-	bc := append([]string{}, b...)
-	sort.Strings(ac)
-	sort.Strings(bc)
-	for i := range ac {
-		if ac[i] != bc[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.ExternalObservation, error) {
 	cr, ok := mg.(*v1alpha1.Token)
 	if !ok {
@@ -140,7 +123,7 @@ func (e *external) Observe(ctx context.Context, mg xpresource.Managed) (managed.
 	cr.Status.AtProvider.ID = &idStr
 	cr.Status.AtProvider.Scopes = found.Scopes
 	meta.SetExternalName(cr, idStr)
-	upToDate := scopesEqual(found.Scopes, cr.Spec.ForProvider.Scopes)
+	upToDate := clients.TokenScopesEqual(found.Scopes, cr.Spec.ForProvider.Scopes)
 	cr.SetConditions(xpv1.Available())
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
@@ -157,7 +140,7 @@ func (e *external) Create(ctx context.Context, mg xpresource.Managed) (managed.E
 	if len(cr.Spec.ForProvider.Scopes) == 0 {
 		return managed.ExternalCreation{}, errors.New(errMissingScopes)
 	}
-	resp, err := e.api.Create(ctx, e.username, name, cr.Spec.ForProvider.Scopes)
+	resp, err := e.api.Create(ctx, e.username, name, clients.CanonicalTokenScopes(cr.Spec.ForProvider.Scopes))
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreate)
 	}
@@ -193,7 +176,7 @@ func (e *external) Update(ctx context.Context, mg xpresource.Managed) (managed.E
 			}
 		}
 	}
-	resp, err := e.api.Create(ctx, e.username, name, cr.Spec.ForProvider.Scopes)
+	resp, err := e.api.Create(ctx, e.username, name, clients.CanonicalTokenScopes(cr.Spec.ForProvider.Scopes))
 	if err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errCreate)
 	}
